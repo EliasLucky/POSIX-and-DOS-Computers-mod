@@ -2,7 +2,7 @@ package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.List;
 
-import com.eliaslucky.mc_dos.blocks.computer.processors.DosCommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.Dos6CommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.LinuxCommandProcessor;
 
@@ -15,7 +15,7 @@ public enum ComputerType {
 		0xFFFFFF/*0x00FF00*/,
 		List.of("COMMAND.COM", "AUTOEXEC.BAT", "CONFIG.SYS"),
 		"IBM PC/AT POST Memory Test: 640K OK",
-		new DosCommandProcessor(),
+		new Dos6CommandProcessor(),
 		"C:\\"
 	),
 

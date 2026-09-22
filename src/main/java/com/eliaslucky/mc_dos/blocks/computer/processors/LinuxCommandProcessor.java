@@ -120,4 +120,10 @@ public class LinuxCommandProcessor implements ICommandProcessor {
 				return "bash: " + cmd + ": command not found";
 		}
 	}
+
+	@Override
+	public String defaultPath() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

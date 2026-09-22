@@ -12,8 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractEditorApplication extends TerminalApplication {
-
-    // ── Text buffer ──────────────────────────────────────────────────────
+    // Text buffer
     protected final List<StringBuilder> lines = new ArrayList<>();
     protected final String filePath;
 
@@ -22,7 +21,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     protected boolean modified;
     protected String statusMessage = "";
 
-    // ── Popup dialog (null when none shown) ──────────────────────────────
+    // Popup dialog (null when none shown)
     protected DialogState dialog;
 
     protected AbstractEditorApplication(ComputerTerminalScreen screen,
@@ -35,11 +34,11 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         if (lines.isEmpty()) lines.add(new StringBuilder());
     }
 
-    // ── Chrome provided by subclasses ────────────────────────────────────
+    // Chrome provided by subclasses
     protected abstract void renderMenuBar(GuiGraphics g);
     protected abstract String footerHints();
 
-    // ── Layout ───────────────────────────────────────────────────────────
+    // Layout
     protected int topRow()     { return 1; }                    // below menu bar
     protected int textRows()   { return rows() - 3; }           // minus menu + immediate + footer
     protected int textCols()   { return cols() - 1; }           // minus vscrollbar
@@ -47,7 +46,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
 
     @Override protected void onResize() { clampScrollToCursor(); }
 
-    // ── Render entry point ───────────────────────────────────────────────
+    // Render
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, appWidth, appHeight, DosPalette.BLUE);
@@ -109,6 +108,11 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         drawDos(g, left.toString(),  0, y, DosPalette.WHITE);
         drawDos(g, label,            labelStart * CELL_W, y, DosPalette.WHITE);
         drawDos(g, right.toString(), (labelStart + label.length()) * CELL_W, y, DosPalette.WHITE);
+        renderImmediateContent(g);
+    }
+    
+    protected void renderImmediateContent(GuiGraphics g) {
+        // default: nothing
     }
 
     protected void renderFooter(GuiGraphics g) {
@@ -127,7 +131,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         }
     }
 
-    // ── Input dispatch ───────────────────────────────────────────────────
+    // Input
     @Override
     public boolean charTyped(char cp, int mods) {
         if (dialog != null) return dialog.charTyped(cp);
@@ -168,7 +172,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     /** Subclass hook for F-keys etc. Return true if consumed. */
     protected boolean handleFunctionKey(int key) { return false; }
 
-    // ── Editing primitives ───────────────────────────────────────────────
+    // Editing
     protected void moveCursor(int dRow, int dCol) {
         if (dRow != 0) {
             cursorRow = Math.max(0, Math.min(lines.size() - 1, cursorRow + dRow));
@@ -214,7 +218,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         modified = true; statusMessage = ""; clampScrollToCursor();
     }
 
-    // ── File I/O ─────────────────────────────────────────────────────────
+    // File I/O
     protected void saveFile() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < lines.size(); i++) {
@@ -235,7 +239,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         return sb.toString();
     }
 
-    // ── Scroll ───────────────────────────────────────────────────────────
+    // Scroll
     protected int maxLineLength() {
         int max = 0;
         for (StringBuilder sb : lines) max = Math.max(max, sb.length());
@@ -254,7 +258,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         scrollCol = Math.max(0, Math.min(scrollCol, Math.max(0, maxLineLength() - cols)));
     }
 
-    // ── Drawing helper — all subclasses should use this ──────────────────
+    // Drawing helper — all subclasses should use this
     public void drawDos(GuiGraphics g, String text, int x, int y, int color) {
         g.drawString(Minecraft.getInstance().font,
                 Component.literal(text).withStyle(screen.getDosStyle()),

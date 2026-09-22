@@ -63,7 +63,7 @@ public class MenuBar {
                 selectedItem = (selectedItem < 0)
                         ? items.size() - 1
                         : (selectedItem - 1 + items.size()) % items.size();
-		return null;
+                return null;
             }
 
             case GLFW.GLFW_KEY_ENTER:
@@ -85,15 +85,6 @@ public class MenuBar {
         if (letter >= 0) {
             char ch = (char) letter;
 
-            // If the top-level menu label matches, switch to it.
-            int topIdx = QBasicMenus.indexOfMnemonic(ch);
-            if (topIdx >= 0) {
-                selectedMenu = topIdx;
-                selectedItem = -1;
-                return null;
-            }
-
-            // Otherwise, search the items of the currently open menu.
             if (selectedMenu >= 0) {
                 List<MenuItem> items = menus.get(selectedMenu).items();
                 for (int i = 0; i < items.size(); i++) {
@@ -103,6 +94,13 @@ public class MenuBar {
                         return action;
                     }
                 }
+            }
+
+            int topIdx = QBasicMenus.indexOfMnemonic(ch);
+            if (topIdx >= 0) {
+                selectedMenu = topIdx;
+                selectedItem = -1;
+                return null;
             }
         }
 
@@ -131,7 +129,7 @@ public class MenuBar {
         }
         // Clicking inside an open dropdown selects an item.
         if (active && selectedMenu >= 0 && row >= 1) {
-            int idx = row - 1;
+            int idx = row - 2;
             if (idx >= 0 && idx < menus.get(selectedMenu).items().size()) {
                 String action = menus.get(selectedMenu).items().get(idx).action();
                 close();
