@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.client.apps.display;
+
+import net.minecraft.client.gui.GuiGraphics;
+
 public abstract class DisplayMode {
     public final int id;              // 0, 1, 2, 7, 9, 12, 13
     public final int widthPx;         // framebuffer width (0 for text modes)

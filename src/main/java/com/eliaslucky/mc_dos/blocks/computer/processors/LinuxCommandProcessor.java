@@ -1,8 +1,9 @@
-package com.eliaslucky.furniture.blocks.computer.processors;
+package com.eliaslucky.mc_dos.blocks.computer.processors;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
-import com.eliaslucky.furniture.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
+// SCRAP THIS
 public class LinuxCommandProcessor implements ICommandProcessor {
 	@Override
 	public String getPrompt(String currentPath) {

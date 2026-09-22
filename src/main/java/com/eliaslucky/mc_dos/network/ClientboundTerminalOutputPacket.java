@@ -1,6 +1,5 @@
-package com.eliaslucky.furniture.network;
+package com.eliaslucky.mc_dos.network;
 
-import com.eliaslucky.furniture.client.ComputerTerminalScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
@@ -8,6 +7,8 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
+
+import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 
 public class ClientboundTerminalOutputPacket {
 	private final String output;

@@ -1,10 +1,10 @@
-package com.eliaslucky.furniture.blocks.computer;
+package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.List;
 
-import com.eliaslucky.furniture.blocks.computer.processors.DosCommandProcessor;
-import com.eliaslucky.furniture.blocks.computer.processors.ICommandProcessor;
-import com.eliaslucky.furniture.blocks.computer.processors.LinuxCommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.DosCommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.LinuxCommandProcessor;
 
 public enum ComputerType {
 	IBM_PC_AT(

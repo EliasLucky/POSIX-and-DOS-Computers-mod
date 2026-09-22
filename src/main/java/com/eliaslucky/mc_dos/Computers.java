@@ -1,7 +1,7 @@
-package com.eliaslucky.furniture;
+package com.eliaslucky.mc_dos;
 
-import com.eliaslucky.furniture.blocks.ICustomCreativeTab;
-import com.eliaslucky.furniture.network.ModMessages;
+import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
+import com.eliaslucky.mc_dos.network.ModMessages;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.world.item.Item;

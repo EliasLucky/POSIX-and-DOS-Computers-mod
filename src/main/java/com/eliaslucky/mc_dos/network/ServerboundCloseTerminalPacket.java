@@ -1,6 +1,6 @@
-package com.eliaslucky.furniture.network;
+package com.eliaslucky.mc_dos.network;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;

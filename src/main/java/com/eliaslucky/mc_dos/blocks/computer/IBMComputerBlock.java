@@ -1,9 +1,9 @@
-package com.eliaslucky.furniture.blocks.computer;
+package com.eliaslucky.mc_dos.blocks.computer;
 
-import com.eliaslucky.furniture.AllCreativeModeTabs;
-import com.eliaslucky.furniture.blocks.DirectionalHorizontalBlock;
-import com.eliaslucky.furniture.blocks.ICustomCreativeTab;
-import com.eliaslucky.furniture.client.ComputerTerminalScreen;
+import com.eliaslucky.mc_dos.AllCreativeModeTabs;
+import com.eliaslucky.mc_dos.blocks.DirectionalHorizontalBlock;
+import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
+import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

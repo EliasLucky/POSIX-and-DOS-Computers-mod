@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture.network;
+package com.eliaslucky.mc_dos.network;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -9,7 +9,7 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 
 public class ServerboundCommandPacket {
 	private final BlockPos pos;

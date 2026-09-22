@@ -1,6 +1,6 @@
-package com.eliaslucky.furniture.network;
+package com.eliaslucky.mc_dos.network;
 
-import com.eliaslucky.furniture.Furniture;
+import com.eliaslucky.mc_dos.Computers;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkDirection;
@@ -18,7 +18,7 @@ public class ModMessages {
 
 	public static void register() {
 		SimpleChannel net = NetworkRegistry.ChannelBuilder
-				.named(ResourceLocation.fromNamespaceAndPath(Furniture.MODID, "messages"))
+				.named(ResourceLocation.fromNamespaceAndPath(Computers.MODID, "messages"))
 				.networkProtocolVersion(() -> "1.0")
 				.clientAcceptedVersions(s -> true)
 				.serverAcceptedVersions(s -> true)

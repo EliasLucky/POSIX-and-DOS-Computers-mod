@@ -1,8 +1,11 @@
-package com.eliaslucky.furniture.blocks.computer;
+package com.eliaslucky.mc_dos.blocks.computer;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
-import com.eliaslucky.furniture.AllBlockEntities;
+import com.eliaslucky.mc_dos.AllBlockEntities;
+import com.eliaslucky.mc_dos.blocks.computer.processors.AbstractDosCommandProcessor;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -34,6 +37,7 @@ public class ComputerBlockEntity extends BlockEntity {
 		this.computerType = type;
 		if (!initializedDefaults) {
 			setupDefaultFiles();
+			setupEnvironment();
 			initializedDefaults = true;
 			setChanged();		
 		}
@@ -96,29 +100,29 @@ public class ComputerBlockEntity extends BlockEntity {
 		}
 	}
 
-private UUID activeUser = null;
+	private UUID activeUser = null;
 
-public boolean isUsed() {
-    return activeUser != null;
-}
+	public boolean isUsed() {
+	    return activeUser != null;
+	}
 
-public UUID getActiveUser() {
-    return activeUser;
-}
+	public UUID getActiveUser() {
+	    return activeUser;
+	}
 
-public boolean tryOccupy(Player player) {
-    if (activeUser == null || activeUser.equals(player.getUUID())) {
-        activeUser = player.getUUID();
-        setChanged();
-        return true;
-    }
-    return false;
-}
+	public boolean tryOccupy(Player player) {
+	    if (activeUser == null || activeUser.equals(player.getUUID())) {
+	        activeUser = player.getUUID();
+	        setChanged();
+	        return true;
+	    }
+	    return false;
+	}
 
-public void releaseUser(Player player) {
-    if (activeUser != null && activeUser.equals(player.getUUID())) {
-        activeUser = null;
-        setChanged();
-    }
-}
+	public void releaseUser(Player player) {
+	    if (activeUser != null && activeUser.equals(player.getUUID())) {
+	        activeUser = null;
+	        setChanged();
+	    }
+	}
 }

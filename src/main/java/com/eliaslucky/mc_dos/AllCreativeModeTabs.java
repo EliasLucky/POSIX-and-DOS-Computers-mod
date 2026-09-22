@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture;
+package com.eliaslucky.mc_dos;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -10,17 +10,11 @@ import net.minecraftforge.registries.RegistryObject;
 
 //@EventBusSubscriber(bus = Bus.MOD)
 public class AllCreativeModeTabs {
-	private static final DeferredRegister<CreativeModeTab> REGISTER = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Furniture.MODID);
+	private static final DeferredRegister<CreativeModeTab> REGISTER = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, Computers.MODID);
 
 	public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = REGISTER.register("base", () -> CreativeModeTab.builder()
-		.title(Component.translatable("itemGroup.abstract_furniture.base"))
+		.title(Component.translatable("itemGroup.mc_dos.base"))
 		.icon(() -> new ItemStack(AllBlocks.CHAIR.get()))
-		.build()
-	);
-
-	public static final RegistryObject<CreativeModeTab> ROAD_CREATIVE_TAB = REGISTER.register("road", () -> CreativeModeTab.builder()
-		.title(Component.translatable("itemGroup.abstract_furniture.road"))
-		.icon(() -> new ItemStack(AllBlocks.ORANGE_BARREL_ROAD_BARRIER.get()))
 		.build()
 	);
 

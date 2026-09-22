@@ -1,6 +1,6 @@
-package com.eliaslucky.furniture.blocks;
+package com.eliaslucky.mc_dos.blocks;
 
-import com.eliaslucky.furniture.AllCreativeModeTabs;
+import com.eliaslucky.mc_dos.AllCreativeModeTabs;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;

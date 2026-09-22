@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture;
+package com.eliaslucky.mc_dos;
 
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -7,7 +7,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 public class AllItems {
-	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Furniture.MODID);
+	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Computers.MODID);
 
 	public static final RegistryObject<Item> TABLE = ITEMS.register("table",
 		() -> new BlockItem(AllBlocks.TABLE.get(), new Item.Properties())

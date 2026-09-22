@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture.blocks.computer;
+package com.eliaslucky.mc_dos.blocks.computer;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;

@@ -1,6 +1,9 @@
-package com.eliaslucky.furniture.client;
+package com.eliaslucky.mc_dos.client.apps.display;
 
+/** The classic EGA/VGA 16-color palette, as seen by QBASIC. */
 public final class DosPalette {
+    private DosPalette() {}
+
     public static final int BLACK         = 0xFF000000;
     public static final int BLUE          = 0xFF0000AA;
     public static final int GREEN         = 0xFF00AA00;
@@ -17,4 +20,10 @@ public final class DosPalette {
     public static final int LIGHT_MAGENTA = 0xFFFF55FF;
     public static final int YELLOW        = 0xFFFFFF55;
     public static final int WHITE         = 0xFFFFFFFF;
+
+    public static final int[] EGA = {
+        BLACK, BLUE, GREEN, CYAN, RED, MAGENTA, BROWN, LIGHT_GRAY,
+        DARK_GRAY, LIGHT_BLUE, LIGHT_GREEN, LIGHT_CYAN,
+        LIGHT_RED, LIGHT_MAGENTA, YELLOW, WHITE
+    };
 }

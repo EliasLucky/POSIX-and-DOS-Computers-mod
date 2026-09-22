@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture;
+package com.eliaslucky.mc_dos;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -8,15 +8,14 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-import com.eliaslucky.furniture.blocks.SquareTableBlock;
-import com.eliaslucky.furniture.blocks.TrashBinBlock;
-import com.eliaslucky.furniture.blocks.computer.ComputerType;
-import com.eliaslucky.furniture.blocks.computer.IBMComputerBlock;
-import com.eliaslucky.furniture.blocks.ChairBlock;
-import com.eliaslucky.furniture.blocks.DeskCabinetBlock;
+import com.eliaslucky.mc_dos.blocks.SquareTableBlock;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
+import com.eliaslucky.mc_dos.blocks.computer.IBMComputerBlock;
+import com.eliaslucky.mc_dos.blocks.ChairBlock;
+import com.eliaslucky.mc_dos.blocks.DeskCabinetBlock;
 
 public class AllBlocks {
-	public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, Furniture.MODID);
+	public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, Computers.MODID);
 
 	public static final RegistryObject<Block> TABLE = BLOCKS.register("table",
 		() -> new SquareTableBlock(BlockBehaviour.Properties.of()

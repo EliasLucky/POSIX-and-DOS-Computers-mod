@@ -1,6 +1,8 @@
-package com.eliaslucky.furniture.blocks.computer.apps;
+package com.eliaslucky.mc_dos.client.apps;
 
-import com.eliaslucky.furniture.client.ComputerTerminalScreen;
+import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
+import com.eliaslucky.mc_dos.client.apps.qbasic.QBasicApplication;
+
 import java.util.*;
 
 public final class TerminalApplicationRegistry {

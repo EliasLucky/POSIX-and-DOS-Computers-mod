@@ -1,5 +1,9 @@
+package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
+// MS-DOS 6.0
 public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
 	@Override protected String defaultPath() { return "C:\\DOS;C:\\"; }
 

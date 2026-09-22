@@ -1,6 +1,6 @@
-package com.eliaslucky.furniture.blocks.computer.processors;
+package com.eliaslucky.mc_dos.blocks.computer.processors;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 
 public interface ICommandProcessor {
 	String process(ComputerBlockEntity computer, String rawInput);

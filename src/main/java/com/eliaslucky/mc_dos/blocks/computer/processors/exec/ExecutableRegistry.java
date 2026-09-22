@@ -1,7 +1,7 @@
-package com.eliaslucky.furniture.blocks.computer.processors.exec;
+package com.eliaslucky.mc_dos.blocks.computer.processors.exec;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
-import com.eliaslucky.furniture.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
 import java.util.*;
 

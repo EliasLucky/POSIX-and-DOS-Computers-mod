@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture.blocks;
+package com.eliaslucky.mc_dos.blocks;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;

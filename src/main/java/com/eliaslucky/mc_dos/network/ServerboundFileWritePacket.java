@@ -1,7 +1,7 @@
-package com.eliaslucky.furniture.network;
+package com.eliaslucky.mc_dos.network;
 
-import com.eliaslucky.furniture.blocks.computer.ComputerBlockEntity;
-import com.eliaslucky.furniture.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;

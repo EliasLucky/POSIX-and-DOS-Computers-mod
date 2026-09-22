@@ -1,16 +1,17 @@
-package com.eliaslucky.furniture.client;
+package com.eliaslucky.mc_dos.client;
 
 import org.lwjgl.glfw.GLFW;
 
-import com.eliaslucky.furniture.Furniture;
-import com.eliaslucky.furniture.blocks.computer.ComputerType;
-import com.eliaslucky.furniture.blocks.computer.apps.TerminalApplication;
-import com.eliaslucky.furniture.blocks.computer.apps.TerminalApplicationRegistry;
-import com.eliaslucky.furniture.network.ModMessages;
-import com.eliaslucky.furniture.network.ServerboundCloseTerminalPacket;
-import com.eliaslucky.furniture.network.ServerboundCommandPacket;
-import com.eliaslucky.furniture.network.ServerboundFileWritePacket;
+import com.eliaslucky.mc_dos.Computers;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
+import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
+import com.eliaslucky.mc_dos.client.apps.TerminalApplicationRegistry;
+import com.eliaslucky.mc_dos.network.ModMessages;
+import com.eliaslucky.mc_dos.network.ServerboundCloseTerminalPacket;
+import com.eliaslucky.mc_dos.network.ServerboundCommandPacket;
+import com.eliaslucky.mc_dos.network.ServerboundFileWritePacket;
 
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -23,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ComputerTerminalScreen extends Screen {
-	private static final ResourceLocation DOS_FONT = ResourceLocation.fromNamespaceAndPath(Furniture.MODID, "ibm_vga_8x16");
+	private static final ResourceLocation DOS_FONT = ResourceLocation.fromNamespaceAndPath(Computers.MODID, "ibm_vga_8x16");
 	private static final Style DOS_STYLE = Style.EMPTY.withFont(DOS_FONT);
 
 	private final BlockPos pos;
@@ -157,6 +158,13 @@ public class ComputerTerminalScreen extends Screen {
 			activeApp = null;
 		}
 	}
+	
+	public void returnToShell() {
+		if (activeApp != null) {
+			activeApp.onClose();
+			activeApp = null;
+		}
+	}
 
 	public void saveFile(String path, String content) {
 		ModMessages.sendToServer(new ServerboundFileWritePacket(this.pos, path, content));
@@ -194,13 +202,13 @@ public class ComputerTerminalScreen extends Screen {
 			return;
 		}
 
-	for (String line : output.split("\n")) history.add(line);
+		for (String line : output.split("\n")) history.add(line);
 	}
 
-public Font getDosFont()      { return this.font; }
-public Style getDosStyle()    { return DOS_STYLE; }
-public BlockPos getPos()      { return this.pos; }
-public ComputerType getType() { return this.computerType; }
+	public Font getDosFont()      { return this.font; }
+	public Style getDosStyle()    { return DOS_STYLE; }
+	public BlockPos getPos()      { return this.pos; }
+	public ComputerType getType() { return this.computerType; }
 
 	@Override
 	public void onClose() {

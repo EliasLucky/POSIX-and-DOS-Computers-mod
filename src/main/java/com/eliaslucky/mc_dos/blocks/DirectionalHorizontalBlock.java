@@ -1,4 +1,4 @@
-package com.eliaslucky.furniture.blocks;
+package com.eliaslucky.mc_dos.blocks;
 
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
