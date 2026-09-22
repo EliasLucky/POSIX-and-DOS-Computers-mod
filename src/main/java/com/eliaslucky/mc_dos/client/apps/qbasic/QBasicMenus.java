@@ -60,7 +60,6 @@ public final class QBasicMenus {
         ))
     );
 
-    // Convenience: case-insensitive lookup by top-level mnemonic.
     public static int indexOfMnemonic(char m) {
         for (int i = 0; i < ROOT.size(); i++) {
             if (Character.toUpperCase(ROOT.get(i).mnemonic()) == Character.toUpperCase(m)) return i;

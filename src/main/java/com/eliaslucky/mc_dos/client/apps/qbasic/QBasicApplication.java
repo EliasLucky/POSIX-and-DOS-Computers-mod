@@ -8,20 +8,18 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 public class QBasicApplication extends AbstractEditorApplication {
-
-    // ── State machine ────────────────────────────────────────────────────
     public enum Mode  { EDITOR, MENU, DIALOG, RUNNING, RUN_OUTPUT }
     public enum Focus { EDIT, IMMEDIATE }
 
     private Mode  mode  = Mode.EDITOR;
     private Focus focus = Focus.EDIT;
 
-    // ── Regions / helpers ────────────────────────────────────────────────
+    // Regions
     private final MenuBar          menuBar    = new MenuBar(QBasicMenus.ROOT);
     private final ImmediatePane    immediate  = new ImmediatePane();
     private final RunOutputPane    runOutput  = new RunOutputPane();
 
-    // ── Interpreter (built lazily on F5) ─────────────────────────────────
+    // Interpreter
     private QBasicInterpreter   interpreter;
     private QBasicHostImpl      host;
     private boolean             awaitingRunReturn = false;
@@ -44,7 +42,6 @@ public class QBasicApplication extends AbstractEditorApplication {
     	return -1;
     }
 
-    // ── Render dispatch ──────────────────────────────────────────────────
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 
@@ -72,7 +69,6 @@ public class QBasicApplication extends AbstractEditorApplication {
     	drawDos(g, " File   Edit   View   Search   Run   Debug   Options   Help ",0,0,DosPalette.BLACK);
     }
 
-    // ── Footer text per state ────────────────────────────────────────────
     @Override
     protected String footerHints() {
         return switch (mode) {
@@ -86,7 +82,6 @@ public class QBasicApplication extends AbstractEditorApplication {
         };
     }
 
-    // ── Key dispatch ─────────────────────────────────────────────────────
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         boolean isAltKey = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
@@ -173,7 +168,6 @@ public class QBasicApplication extends AbstractEditorApplication {
         return super.keyReleased(key, scan, mods);
     }
 
-    // ── Function keys (edit pane only) ───────────────────────────────────
     @Override
     protected boolean handleFunctionKey(int key) {
         switch (key) {
@@ -184,7 +178,7 @@ public class QBasicApplication extends AbstractEditorApplication {
         return false;
     }
 
-    // ── Immediate pane input ─────────────────────────────────────────────
+    // Immediate pane input
     private boolean handleImmediateKey(int key) {
         switch (key) {
             case GLFW.GLFW_KEY_BACKSPACE: immediate.backspace(); return true;
@@ -206,7 +200,6 @@ public class QBasicApplication extends AbstractEditorApplication {
         immediate.appendOutput(host.getOutput());
     }
 
-    // ── Menu actions ─────────────────────────────────────────────────────
     private void invokeMenuAction(String action) {
         mode = Mode.EDITOR;
         switch (action) {
@@ -252,7 +245,6 @@ public class QBasicApplication extends AbstractEditorApplication {
         return super.charTyped(cp, mods);
     }
 
-    // ── Run pipeline ─────────────────────────────────────────────────────
     private void startRun() {
         // Snapshot current source so we can restore the editor afterwards.
         pendingSourceSnapshot = currentSource();

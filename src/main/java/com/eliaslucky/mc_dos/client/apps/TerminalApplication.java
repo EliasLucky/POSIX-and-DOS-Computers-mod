@@ -14,7 +14,7 @@ public abstract class TerminalApplication {
     protected int appWidth;
     protected int appHeight;
 
-/** Every app has a current display surface. Default is 80×25 text. */
+    /** Every app has a current display surface. Default is 80×25 text. */
     protected DisplayMode displayMode = new Screen0Text();
 
     protected TerminalApplication(ComputerTerminalScreen screen) {

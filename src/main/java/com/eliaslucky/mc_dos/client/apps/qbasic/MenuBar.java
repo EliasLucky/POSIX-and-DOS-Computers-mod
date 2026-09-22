@@ -81,7 +81,6 @@ public class MenuBar {
                 return "__close__";
         }
 
-	 // ── Letter press: jump to matching menu or menu-item ─────────────
         int letter = letterFromKey(key);
         if (letter >= 0) {
             char ch = (char) letter;
@@ -142,7 +141,6 @@ public class MenuBar {
         return null;
     }
 
-    // ── Rendering ────────────────────────────────────────────────────────
     public void render(GuiGraphics g, QBasicApplication owner, int screenW) {
         if (!active) return;
 
@@ -187,7 +185,6 @@ public class MenuBar {
         }
     }
 
-    // ── Mnemonic-aware text drawing ───────────────────────────────────────
     /**
      * Draws `label` in `fgColor`, and re-draws the mnemonic character in
      * `mnemonicColor` with an underline so it's visually distinct.
@@ -219,7 +216,6 @@ public class MenuBar {
         return off;
     }
 
-    // ── Key → letter ─────────────────────────────────────────────────────
     private static int letterFromKey(int key) {
         if (key >= GLFW.GLFW_KEY_A && key <= GLFW.GLFW_KEY_Z) return key;
         return -1;

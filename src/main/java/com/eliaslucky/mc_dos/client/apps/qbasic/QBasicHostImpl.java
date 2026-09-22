@@ -11,20 +11,10 @@ public class QBasicHostImpl implements Host {
 
     @Override
     public void print(String s) {
-        var d = app.getDisplayMode();
-        if (!(d instanceof Screen0Text text)) {
-            // Falls back to System.out-style capture when not in text mode
-            return;
-        }
+    	if (!(app.getDisplayMode() instanceof Screen0Text text)) return;
         for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '\n') { newline(text); continue; }
-            if (c == '\r') continue;
-            if (col >= text.cols) { newline(text); }
-            text.write(row, col, c, 15, 1);  // white on blue
-            col++;
+            text.writeAtCursor(s.charAt(i));
         }
-        text.setCursor(row, col);
     }
 
     private void newline(Screen0Text t) {
