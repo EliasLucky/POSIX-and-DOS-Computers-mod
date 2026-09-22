@@ -255,7 +255,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     }
 
     // ── Drawing helper — all subclasses should use this ──────────────────
-    protected void drawDos(GuiGraphics g, String text, int x, int y, int color) {
+    public void drawDos(GuiGraphics g, String text, int x, int y, int color) {
         g.drawString(Minecraft.getInstance().font,
                 Component.literal(text).withStyle(screen.getDosStyle()),
                 x, y, color, false);

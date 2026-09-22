@@ -242,6 +242,10 @@ public class QBasicApplication extends AbstractEditorApplication {
         if (mode == Mode.MENU)               return true;
         if (mode == Mode.DIALOG)             return true;
         if (mode == Mode.RUN_OUTPUT)         return true;
+        if (mode == Mode.EDITOR && focus == Focus.IMMEDIATE) {
+            immediate.type(cp);
+            return true;
+        }
 
         if (altHeld) return true;
 

@@ -5,7 +5,7 @@ import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
 // MS-DOS 6.0
 public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
-	@Override protected String defaultPath() { return "C:\\DOS;C:\\"; }
+	@Override public String defaultPath() { return "C:\\DOS;C:\\"; }
 
 	@Override protected boolean supportsSlashQuestionHelp() { return true; }
 
@@ -26,12 +26,16 @@ public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
 	}
 
 	@Override
-	protected boolean handleVersionSpecific(ComputerBlockEntity c, VirtualFileSystem vfs,
-											String cmd, String arg, String rawArg) {
+	protected String handleVersionSpecific(ComputerBlockEntity c, VirtualFileSystem vfs, String cmd, String arg, String rawArg) {
 		switch (cmd) {
 			case "MOVE":	/* new in 6.0 */ break;
 			case "DELTREE": /* new in 6.0 */ break;
 		}
-		return false;
+		return null;
+	}
+
+	@Override
+	public String getPrompt(String currentPath) {
+		return currentPath + ">";
 	}
 }

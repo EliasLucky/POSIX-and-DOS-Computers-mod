@@ -80,8 +80,12 @@ public class ComputerBlockEntity extends BlockEntity {
 	protected void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
 		tag.putString("ComputerType", computerType.name());
-			tag.putBoolean("InitializedDefaults", initializedDefaults);
-			tag.put("FileSystem", fileSystem.serializeNBT());
+		tag.putBoolean("InitializedDefaults", initializedDefaults);
+		tag.put("FileSystem", fileSystem.serializeNBT());
+		
+		CompoundTag envTag = new CompoundTag();
+		environment.forEach(envTag::putString);
+		tag.put("Environment", envTag);
 	}
 
 	@Override
@@ -90,13 +94,19 @@ public class ComputerBlockEntity extends BlockEntity {
 		if (tag.contains("ComputerType")) {
 			try {
 				this.computerType = ComputerType.valueOf(tag.getString("ComputerType"));
-			} catch (IllegalArgumentException e) {
+			}
+			catch (IllegalArgumentException e) {
 				this.computerType = ComputerType.IBM_PC_AT;
 			}
 		}
 		this.initializedDefaults = tag.getBoolean("InitializedDefaults");
 		if (tag.contains("FileSystem")) {
 			fileSystem.deserializeNBT(tag.getCompound("FileSystem"));
+		}
+		if (tag.contains("Environment")) {
+			environment.clear();
+			CompoundTag envTag = tag.getCompound("Environment");
+			for (String k : envTag.getAllKeys()) environment.put(k, envTag.getString(k));
 		}
 	}
 

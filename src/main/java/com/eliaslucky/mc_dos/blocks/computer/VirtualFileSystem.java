@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class VirtualFileSystem {
@@ -140,7 +141,7 @@ public class VirtualFileSystem {
 
 		public void addChild(Node child) {
 			child.parent = this;
-			children.put(child.name, child);
+			children.put(child.name.toUpperCase(Locale.ROOT), child);
 		}
 
 		public CompoundTag save() {

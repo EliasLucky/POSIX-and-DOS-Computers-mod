@@ -185,6 +185,7 @@ public class ComputerTerminalScreen extends Screen {
 		if (updatedPath != null && !updatedPath.isEmpty()) this.activePath = updatedPath;
 		if (output == null || output.isEmpty()) return;
 
+		if (output.equals("__CLEAR__")) { history.clear(); return; }
 		if (output.startsWith("APP_LAUNCH:")) {
 			// APP_LAUNCH:NAME:ARGS:CONTENT  (split limit 4 keeps CONTENT intact)
 			String[] parts = output.split(":", 4);

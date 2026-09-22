@@ -158,7 +158,7 @@ public class MenuBar {
             g.fill(x1, 0, x2, 16, DosPalette.BLUE);
             //owner.drawDos(g, menus.get(selectedMenu).label(), x1, 0, DosPalette.WHITE);
 	    drawLabelWithMnemonic(owner, menus.get(selectedMenu).label(),
-                    menus.get(selectedMenu).mnemonic(),
+                    menus.get(selectedMenu).mnemonic(), g,
                     x1, 0, DosPalette.WHITE, DosPalette.YELLOW);
         }
 
@@ -181,7 +181,7 @@ public class MenuBar {
                 if (hot) g.fill(x*8, iy, (x+w)*8, iy + 16, DosPalette.BLUE);
                 int fg    = hot ? DosPalette.WHITE  : DosPalette.BLACK;
                 int mnem  = hot ? DosPalette.YELLOW : DosPalette.BLUE; // contrast
-                drawLabelWithMnemonic(owner, items.get(i).label(), items.get(i).mnemonic(),
+                drawLabelWithMnemonic(owner, items.get(i).label(), items.get(i).mnemonic(), g,
                         (x + 1) * 8, iy, fg, mnem);
             }
         }
@@ -194,24 +194,24 @@ public class MenuBar {
      * This is the DOS convention (highlighted letter, sometimes underlined).
      */
     private void drawLabelWithMnemonic(QBasicApplication owner, String label, char mnemonic, GuiGraphics g, int x, int y, int fgColor, int mnemColor) {
-    owner.drawDos(g, label, x, y, fgColor);
+        owner.drawDos(g, label, x, y, fgColor);
 
-    int idx = -1;
-    for (int i = 0; i < label.length(); i++) {
-        if (Character.toUpperCase(label.charAt(i)) == Character.toUpperCase(mnemonic)) {
-            idx = i;
-            break;
+        int idx = -1;
+        for (int i = 0; i < label.length(); i++) {
+            if (Character.toUpperCase(label.charAt(i)) == Character.toUpperCase(mnemonic)) {
+                idx = i;
+                break;
+            }
         }
+        if (idx < 0) return;
+
+        int cellX = x + idx * 8;
+        // Redraw the single character in the mnemonic color.
+        owner.drawDos(g, String.valueOf(label.charAt(idx)), cellX, y, mnemColor);
+
+        // Underline: 1 px line across the bottom of the 8×16 cell.
+        g.fill(cellX, y + 16 - 2, cellX + 8, y + 16 - 1, mnemColor);
     }
-    if (idx < 0) return;
-
-    int cellX = x + idx * 8;
-    // Redraw the single character in the mnemonic color.
-    owner.drawDos(g, String.valueOf(label.charAt(idx)), cellX, y, mnemColor);
-
-    // Underline: 1 px line across the bottom of the 8×16 cell.
-    g.fill(cellX, y + 16 - 2, cellX + 8, y + 16 - 1, mnemColor);
-}
 
     private int menuOffset(int index) {
         int off = 1;

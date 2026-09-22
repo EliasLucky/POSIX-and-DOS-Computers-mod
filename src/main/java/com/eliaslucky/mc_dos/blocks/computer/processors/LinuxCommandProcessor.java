@@ -3,7 +3,7 @@ package com.eliaslucky.mc_dos.blocks.computer.processors;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
-// SCRAP THIS
+// TODO: SCRAP THIS
 public class LinuxCommandProcessor implements ICommandProcessor {
 	@Override
 	public String getPrompt(String currentPath) {

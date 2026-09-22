@@ -9,29 +9,22 @@ import java.util.Date;
 import java.util.Locale;
 
 public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
+	// Default PATH used on a fresh machine, e.g. "C:\\DOS;C:\\".
+    public abstract String defaultPath();
 
-    // ── Version hooks ────────────────────────────────────────────────────
-
-    /** Default PATH used on a fresh machine, e.g. "C:\\DOS;C:\\". */
-    protected abstract String defaultPath();
-
-    /** Does this DOS understand `cmd /?` ? (5.0+ yes, 3.x no). */
+    // Does this DOS understand `cmd /?` ? (5.0+ yes, 3.x no).
     protected boolean supportsSlashQuestionHelp() { return false; }
 
-    /** Command names this version adds on top of the shared set. */
-    protected boolean handleVersionSpecific(ComputerBlockEntity computer,
-                                            VirtualFileSystem vfs,
-                                            String cmd, String arg, String rawArg) {
-        return false; // default: nothing extra
+    // Command names this version adds on top of the shared set.
+    protected String handleVersionSpecific(ComputerBlockEntity computer, VirtualFileSystem vfs, String cmd, String arg, String rawArg) {
+        return null; // default: nothing extra
     }
 
-    /** Template contents for a brand new file created by an editor. */
+    // Template contents for a brand new file created by an editor.
     protected String newFileTemplate(String extension) { return ""; }
 
-    /** Command name used for "list files": both use DIR but keep it a hook. */
+    // Command name used for "list files": both use DIR but keep it a hook.
     protected String dirCommandName() { return "DIR"; }
-
-    // ── Shared command entry point ───────────────────────────────────────
 
     @Override
     public String process(ComputerBlockEntity computer, String rawInput) {
@@ -44,9 +37,8 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         String argRaw = parts.length > 1 ? parts[1].trim() : "";
         String arg = argRaw;
    
-        if (handleVersionSpecific(computer, vfs, cmd, arg, argRaw)) {
-            return "";
-        }
+        String specific = handleVersionSpecific(computer, vfs, cmd, arg, argRaw);
+        if (specific != null) return specific;
 
         if (supportsSlashQuestionHelp() && arg.equals("/?")) {
             String help = helpFor(cmd);
@@ -80,7 +72,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
             case "PATH": return doPath(computer, arg);
             case "SET": return doSet(computer, argRaw);
             case "TREE": return doTree(vfs);
-            case "CLS": return "\u000C"; // client
+            case "CLS": return "__CLEAR__"; // client
             case "EXIT": return doExit();
             // ... the rest of the shared switch ...
         }
@@ -96,8 +88,70 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 
     protected String fallbackUnknown(ComputerBlockEntity c, String cmd) { return null; }
 
-    // ── Shared implementations (ports of your existing code) ─────────────
+    protected String doDir(VirtualFileSystem vfs, ComputerBlockEntity computer, String arg) {
+        VirtualFileSystem.Node targetDirNode = arg.isEmpty()
+                ? vfs.getCurrentDir()
+                : vfs.resolvePath(arg);
+        if (targetDirNode == null || !targetDirNode.isDirectory) {
+            return "Invalid directory";
+        }
 
+        String displayPath = vfs.getAbsolutePath(targetDirNode)
+                .replace("/", "\\")
+                .replaceAll("\\\\+", "\\\\");
+
+        StringBuilder out = new StringBuilder()
+            .append("\n Volume in drive C has no label\n")
+            .append(" Volume Serial Number is 1337-3000\n")
+            .append(" Directory of ").append(displayPath).append("\n\n");
+
+        int fileCount = 0;
+        int totalBytes = 0;
+
+        java.util.function.Function<VirtualFileSystem.Node, String> row = (node) -> {
+            String baseName = node.name;
+            String ext = "";
+            if (!node.name.equals(".") && !node.name.equals("..")) {
+                int dot = node.name.lastIndexOf('.');
+                if (dot != -1) {
+                    baseName = node.name.substring(0, dot);
+                    ext = node.name.substring(dot + 1);
+                }
+            }
+            if (baseName.length() > 8) baseName = baseName.substring(0, 8);
+            if (ext.length() > 3)      ext = ext.substring(0, 3);
+
+            String size = node.isDirectory ? "<DIR>" : String.valueOf(node.content.length());
+            String date = formatDosDate(node.modifiedTime);
+            String time = formatDosTime(node.modifiedTime);
+
+            return String.format("%-8s %-3s   %10s   %s  %s%n",
+                    baseName.toUpperCase(Locale.ROOT),
+                    ext.toUpperCase(Locale.ROOT),
+                    size, date, time);
+        };
+
+        if (targetDirNode.parent != null) {
+            VirtualFileSystem.Node dot    = new VirtualFileSystem.Node(".",  true);
+            VirtualFileSystem.Node dotdot = new VirtualFileSystem.Node("..", true);
+            dot.modifiedTime    = targetDirNode.modifiedTime;
+            dotdot.modifiedTime = targetDirNode.parent.modifiedTime;
+            out.append(row.apply(dot));
+            out.append(row.apply(dotdot));
+            fileCount += 2;
+        }
+
+        for (VirtualFileSystem.Node node : targetDirNode.children.values()) {
+            out.append(row.apply(node));
+            if (!node.isDirectory) totalBytes += node.content.length();
+            fileCount++;
+        }
+
+        out.append(String.format("%5d File(s) %12d bytes free\n",
+                fileCount, 655360 - totalBytes));
+        return out.toString();
+    }
+    
     protected String doCd(VirtualFileSystem vfs, String arg) {
         if (arg.isEmpty()) return vfs.getCurrentPath();
         VirtualFileSystem.Node target = vfs.resolvePath(arg);
@@ -128,6 +182,112 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         c.setChanged();
         return "";
     }
+    
+    protected String doRd(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
+        if (arg.isEmpty()) return "Required parameter missing";
+
+        VirtualFileSystem.Node target = vfs.resolvePath(arg);
+        if (target == null || !target.isDirectory) {
+            return "Invalid path, not a directory, or directory not found.";
+        }
+        if (target == vfs.getRoot()) {
+            return "Attempt to remove root directory ignored.";
+        }
+        if (!target.children.isEmpty()) {
+            return "Directory not empty";
+        }
+
+        // Can't remove a directory we're standing in.
+        VirtualFileSystem.Node check = vfs.getCurrentDir();
+        while (check != null) {
+            if (check == target) return "Attempt to remove current directory ignored.";
+            check = check.parent;
+        }
+
+        if (target.parent != null) {
+            target.parent.children.remove(target.name);
+            c.setChanged();
+        }
+        return "";
+    }
+    
+    protected String doCopy(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
+        if (arg.isEmpty()) return "Required parameter missing";
+        String[] parts = arg.split("\\s+", 2);
+        if (parts.length < 2) return "Required parameter missing";
+
+        String srcPath  = parts[0];
+        String destPath = parts[1];
+
+        VirtualFileSystem.Node srcNode = vfs.resolvePath(srcPath);
+        if (srcNode == null || srcNode.isDirectory) return "File not found";
+
+        VirtualFileSystem.Node destNode = vfs.resolvePath(destPath);
+        VirtualFileSystem.Node destParent;
+        String destFileName;
+
+        if (destNode != null && destNode.isDirectory) {
+            destParent   = destNode;
+            destFileName = srcNode.name;
+        } else {
+            String clean = destPath.replace('/', '\\');
+            int lastSlash = clean.lastIndexOf('\\');
+            if (lastSlash != -1) {
+                String parentPath = clean.substring(0, lastSlash);
+                destFileName = clean.substring(lastSlash + 1);
+                destParent   = parentPath.isEmpty() ? vfs.getRoot() : vfs.resolvePath(parentPath);
+            } else {
+                destParent   = vfs.getCurrentDir();
+                destFileName = clean;
+            }
+        }
+
+        if (destParent == null || !destParent.isDirectory) return "Path not found";
+        if (destFileName.isEmpty()) return "Invalid file name";
+
+        String upperDest = destFileName.toUpperCase(Locale.ROOT);
+        VirtualFileSystem.Node copied = new VirtualFileSystem.Node(upperDest, false);
+        copied.content = srcNode.content;
+        copied.modifiedTime = System.currentTimeMillis();
+        destParent.addChild(copied);
+
+        c.setChanged();
+        return "\t\t1 file(s) copied.";
+    }
+
+    protected String doRen(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
+        if (arg.isEmpty()) return "Required parameter missing";
+        String[] parts = arg.split("\\s+", 2);
+        if (parts.length < 2) return "Required parameter missing";
+
+        String targetPath = parts[0];
+        String newName    = parts[1];
+
+        // REN only accepts a bare name as the destination.
+        if (newName.contains("\\") || newName.contains("/")) {
+            int last = Math.max(newName.lastIndexOf('\\'), newName.lastIndexOf('/'));
+            newName = newName.substring(last + 1);
+        }
+
+        VirtualFileSystem.Node target = vfs.resolvePath(targetPath);
+        if (target == null) return "File not found";
+
+        VirtualFileSystem.Node parent = target.parent;
+        if (parent == null) return "Permission denied";
+
+        String upperNew = newName.toUpperCase(Locale.ROOT);
+        if (parent.children.containsKey(upperNew)) {
+            return "Duplicate file name or file not found";
+        }
+
+        parent.children.remove(target.name.toUpperCase(Locale.ROOT));
+        target.name = upperNew;
+        target.modifiedTime = System.currentTimeMillis();
+        parent.addChild(target);
+
+        c.setChanged();
+        return "";
+    }
 
     protected String doDel(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         if (arg.isEmpty()) return "Required parameter missing";
@@ -144,9 +304,50 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         return "";
     }
 
-    // ... port the rest of your switch bodies here unchanged ...
+    protected String doType(VirtualFileSystem vfs, String arg) {
+        if (arg.isEmpty()) return "Required parameter missing";
+        VirtualFileSystem.Node file = vfs.resolvePath(arg);
+        if (file == null || file.isDirectory) return "File not found";
+        return file.content;
+    }
 
-    // ── PATH / SET / environment ─────────────────────────────────────────
+    protected String doAttrib(VirtualFileSystem vfs, String arg) {
+        if (!arg.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (VirtualFileSystem.Node n : vfs.getCurrentDir().children.values()) {
+            sb.append("A\t\t").append(n.name).append('\n');
+        }
+        return sb.toString();
+    }
+
+    protected String doTree(VirtualFileSystem vfs) {
+        return "Directory PATH listing\nPath: " + vfs.getCurrentPath() + "\nNo sub-directories exist";
+    }
+
+    protected String doEdlin(String arg) {
+        if (arg.isEmpty()) return "File name must be specified";
+        return "New file\n*";
+    }
+    
+    protected String doVer(ComputerBlockEntity computer) {
+        return computer.getComputerType().osVersion;
+    }
+    
+    protected String doDate() {
+        String now = new SimpleDateFormat("EEE MM-dd-yyyy").format(new Date());
+        return "Current date is " + now + "\nEnter new date (mm-dd-yy):";
+    }
+
+    protected String doTime() {
+        String now = new SimpleDateFormat("HH:mm:ss.SS").format(new Date());
+        return "Current time is " + now + "\nEnter new time:";
+    }
+    
+    protected String doExit() {
+        return "__EXIT__";
+    }
+
+    // PATH / SET / environment
 
     protected String doPath(ComputerBlockEntity c, String arg) {
         var env = c.getEnvironment();
@@ -178,7 +379,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         return "";
     }
 
-    // ── Executable resolution ────────────────────────────────────────────
+    // Executable resolution
 
     /**
      * Search PATH for NAME.EXE / NAME.COM / NAME.BAT and launch the registered
@@ -217,11 +418,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         return null;
     }
 
-    // ── Help system ──────────────────────────────────────────────────────
-
     protected abstract String helpFor(String cmd);
-
-    // ── Small utilities reused by subclasses ────────────────────────────
 
     protected static String formatDosDate(long millis) {
         return new SimpleDateFormat("MM-dd-yy").format(new Date(millis));

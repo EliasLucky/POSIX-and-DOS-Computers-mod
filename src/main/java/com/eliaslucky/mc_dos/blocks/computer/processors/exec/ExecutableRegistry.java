@@ -8,13 +8,17 @@ import java.util.*;
 public final class ExecutableRegistry {
 
     public interface Runner {
-        /** Return the output string (may start with APP_LAUNCH:), or "" for silent success. */
+        /** Return the output string (may start with APP_LAUNCH:), or "" for success. */
         String run(ComputerBlockEntity computer, String args, VirtualFileSystem.Node file);
     }
 
     public record Entry(String magicHeader, String templateContent, Runner runner) {
         public boolean matchesHeader(String content) {
             return content != null && content.startsWith(magicHeader);
+        }
+        
+        public String run(ComputerBlockEntity computer, String args, VirtualFileSystem.Node file) {
+            return runner.run(computer, args, file);
         }
     }
 
@@ -29,7 +33,7 @@ public final class ExecutableRegistry {
 
     public static Collection<String> names() { return REGISTRY.keySet(); }
 
-    // A generic MZ header stub — enough to make it look like a DOS executable.
+    // A generic MZ header to make it look like a DOS executable.
     private static final String MZ = "MZ\u0090\u0000\u0003\u0000\u0000\u0000";
 
     static {
