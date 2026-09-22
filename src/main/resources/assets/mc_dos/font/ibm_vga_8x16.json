@@ -1,0 +1,19 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "abstract_furniture:font/ibm_vga_8x16.png",
+      "height": 16,
+      "ascent": 12,
+      "width": 8,
+      "chars": [
+        " !\"#$%&'()*+,-./",
+        "0123456789:;<=>?",
+        "@ABCDEFGHIJKLMNO",
+        "PQRSTUVWXYZ[\\]^_",
+        "`abcdefghijklmno",
+        "pqrstuvwxyz{|}~\u007f"
+      ]
+    }
+  ]
+}
