@@ -2,6 +2,10 @@ package com.eliaslucky.mc_dos.client.apps.qbasic;
 
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 
+/*
+ * QBasicHostImpl routes calls from QBasicInterpreter to displayMode for Minecraft specific things
+ * Host must be server-sided. This class is client-side implementation for rendering.
+ * */
 public class QBasicHostImpl implements Host {
 
     private final TerminalApplication app;

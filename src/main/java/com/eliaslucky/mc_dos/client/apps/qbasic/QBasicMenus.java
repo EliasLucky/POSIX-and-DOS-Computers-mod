@@ -11,6 +11,9 @@ record Menu(String label, char mnemonic, List<MenuItem> items) {
     }
 }
 
+/*
+ * Top menus
+ * */
 public final class QBasicMenus {
     private QBasicMenus() {}
 

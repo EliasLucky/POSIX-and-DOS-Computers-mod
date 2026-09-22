@@ -7,6 +7,9 @@ import com.eliaslucky.mc_dos.client.apps.editor.DialogState;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
+/*
+ * QBasicApplication class that processess editing and QBasic interpreter and QBasicHostImpl (for rendering)
+ * */
 public class QBasicApplication extends AbstractEditorApplication {
     public enum Mode  { EDITOR, MENU, DIALOG, RUNNING, RUN_OUTPUT }
     public enum Focus { EDIT, IMMEDIATE }
