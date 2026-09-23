@@ -116,7 +116,7 @@ public class Parser {
 	                Statement s = parseStatement(line);
 	                if (s != null) elseBody.add(s);
 	                if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) { advance(); continue; }
-	                else break;
+	                break;
 	            }
 	        }
 	        return new IfStmt(line, cond, thenBody, elseBody);
@@ -132,8 +132,13 @@ public class Parser {
 
         while (true) {
             skipNewlines();
-            if (peek().is(Token.TokenType.EOF)) break;   // unterminated: accept silently
+            if (peek().is(Token.TokenType.EOF)) throw new QBasicRuntimeException(1, line, "IF without END IF");
 
+            if (peek().isKeyword("ENDIF")) {
+                advance();
+                break;
+            }
+            
             // END IF
             if (peek().isKeyword("END")) {
                 advance();
@@ -163,7 +168,8 @@ public class Parser {
             while (!peek().is(Token.TokenType.NEWLINE)
                    && !peek().is(Token.TokenType.EOF)
                    && !peek().isKeyword("ELSE")
-                   && !peek().isKeyword("END")) {
+                   && !peek().isKeyword("END")
+                   && !peek().isKeyword("ENDIF")) {
                 advance();
             }
         }
@@ -301,6 +307,8 @@ public class Parser {
     }
     private Expression parsePrimary() {
         Token t = peek();
+        if (t.isKeyword("TRUE"))  { advance(); return new NumberLiteral(-1); }
+        if (t.isKeyword("FALSE")) { advance(); return new NumberLiteral(0);  }
         if (t.is(Token.TokenType.NUMBER)) {
             advance(); return new NumberLiteral(Double.parseDouble(t.text()));
         }

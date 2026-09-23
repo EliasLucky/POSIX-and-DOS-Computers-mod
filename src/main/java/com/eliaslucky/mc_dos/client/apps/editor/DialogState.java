@@ -25,7 +25,6 @@ public class DialogState {
     }
     public DialogState onClosed(Runnable r)   { this.onClosed = r; return this; }
 
-    // ── The welcome dialog, matching QBASIC exactly ──────────────────────
     public static DialogState welcome() {
         return new DialogState()
             .addLine("")
@@ -38,7 +37,6 @@ public class DialogState {
             .addItem("Press ESC to clear this dialog box",    "close");
     }
 
-    // ── Key handling ─────────────────────────────────────────────────────
     public boolean keyPressed(int key) {
         switch (key) {
             case GLFW.GLFW_KEY_UP:    selected = Math.max(0, selected - 1); return true;
@@ -64,7 +62,7 @@ public class DialogState {
         if (onClosed != null) onClosed.run();
     }
 
-    // ── Render ───────────────────────────────────────────────────────────
+    // Render
     public void render(GuiGraphics g, int cols, int rows,
                        AbstractEditorApplication owner) {
         int innerW = 0;

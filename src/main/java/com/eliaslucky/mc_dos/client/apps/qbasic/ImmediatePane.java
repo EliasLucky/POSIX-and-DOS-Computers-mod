@@ -2,55 +2,111 @@ package com.eliaslucky.mc_dos.client.apps.qbasic;
 
 import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import net.minecraft.client.gui.GuiGraphics;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ImmediatePane {
-    private final List<String> history = new ArrayList<>();
-    private final StringBuilder input = new StringBuilder();
+    private static final int VISIBLE_LINES = 2;
 
-    public void type(char c) { input.append(c); }
-    public void backspace() { if (input.length() > 0) input.deleteCharAt(input.length() - 1); }
-    public String consume() {
-        String s = input.toString();
-        history.add(s);
-        input.setLength(0);
-        return s;
+    private final List<String> transcript = new ArrayList<>();  // output of executed lines
+    private final List<StringBuilder> buffer = new ArrayList<>();// user's typed lines
+
+    private int cursorRow = 0;
+    private int cursorCol = 0;
+
+    public ImmediatePane() { buffer.add(new StringBuilder()); }
+
+    public boolean isBlank() {
+        return buffer.size() == 1 && buffer.get(0).length() == 0;
     }
-    public void appendOutput(List<String> out) { history.addAll(out); }
-    public void clear()               { history.clear(); input.setLength(0); }
 
+    // Editing
+    public void insert(char c) {
+        buffer.get(cursorRow).insert(cursorCol, c);
+        cursorCol++;
+    }
+
+    public void insertTab() {
+        int pad = 4 - (cursorCol % 4);
+        for (int i = 0; i < pad; i++) buffer.get(cursorRow).insert(cursorCol++, ' ');
+    }
+
+    public void backspace() {
+        StringBuilder line = buffer.get(cursorRow);
+        if (cursorCol > 0) { line.deleteCharAt(--cursorCol); }
+        else if (cursorRow > 0) {
+            StringBuilder prev = buffer.get(--cursorRow);
+            cursorCol = prev.length();
+            prev.append(line);
+            buffer.remove(cursorRow + 1);
+        }
+    }
+
+    public void moveLeft()  { if (cursorCol > 0) cursorCol--; }
+    public void moveRight() { if (cursorCol < buffer.get(cursorRow).length()) cursorCol++; }
+    public void moveUp()    { if (cursorRow > 0) { cursorRow--; cursorCol = Math.min(cursorCol, buffer.get(cursorRow).length()); } }
+    public void moveDown()  { if (cursorRow < buffer.size() - 1) { cursorRow++; cursorCol = Math.min(cursorCol, buffer.get(cursorRow).length()); } }
+
+    /** Enter: gather the buffer, join with newlines, clear, and return the source. */
+    public String consume() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < buffer.size(); i++) {
+            if (i > 0) sb.append('\n');
+            sb.append(buffer.get(i));
+        }
+        String source = sb.toString();
+        buffer.clear();
+        buffer.add(new StringBuilder());
+        cursorRow = 0;
+        cursorCol = 0;
+        return source;
+    }
+
+    public void appendOutput(List<String> out) {
+        transcript.addAll(out);
+    }
+
+    public void clear() {
+        transcript.clear();
+        buffer.clear();
+        buffer.add(new StringBuilder());
+        cursorRow = 0; cursorCol = 0;
+    }
+
+    // Rendering
     public void render(GuiGraphics g, QBasicApplication owner,
                        int xCell, int yCell, int widthCells, boolean focused) {
-        /*int shown = Math.min(history.size(), 1); // just the last line, like DOS
-        int start = history.size() - shown;
-        for (int i = 0; i < shown; i++) {
-            owner.drawDos(g, history.get(start + i),xCell * 8, (yCell + i) * 16, DosPalette.LIGHT_GRAY);
+
+        int totalRows = transcript.size() + buffer.size();
+        int startRow  = Math.max(0, totalRows - VISIBLE_LINES);
+
+        for (int i = 0; i < VISIBLE_LINES; i++) {
+            int abs = startRow + i;
+            if (abs >= totalRows) break;
+
+            String line;
+            int color;
+            if (abs < transcript.size()) {
+                line = transcript.get(abs);
+                color = DosPalette.LIGHT_GRAY;
+            } else {
+                line = buffer.get(abs - transcript.size()).toString();
+                color = DosPalette.YELLOW;
+            }
+
+            if (line.length() > widthCells) line = line.substring(0, widthCells);
+            owner.drawDos(g, line, xCell * 8, (yCell + i) * 16, color);
         }
-        // Draw the input line
-        owner.drawDos(g, input.toString(),xCell * 8, (yCell + shown) * 16, DosPalette.YELLOW);*/
-    	// Show the last history line, then the input line, side by side at yCell.
-        String lastLine = history.isEmpty() ? "" : history.get(history.size() - 1);
-        // Left half: last output
-        if (!lastLine.isEmpty()) {
-            String s = lastLine.length() > widthCells / 2 ? lastLine.substring(0, widthCells / 2) : lastLine;
-            owner.drawDos(g, s, xCell * 8, yCell * 16, DosPalette.LIGHT_GRAY);
-        }
-        // Right half: current input, yellow
-        int inputX = xCell * 8 + (widthCells / 2) * 8;
-        String shown = input.toString();
-        if (shown.length() > widthCells / 2) shown = shown.substring(shown.length() - widthCells / 2);
-        owner.drawDos(g, shown, inputX, yCell * 16, DosPalette.YELLOW);
+
         if (focused && (System.currentTimeMillis() / 500) % 2 == 0) {
-            int cursorX = inputX + shown.length() * 8;
-            g.fill(cursorX, yCell * 16 + 14, cursorX + 8, yCell * 16 + 16, DosPalette.YELLOW);
+            int bufRowAbs = transcript.size() + cursorRow;
+            if (bufRowAbs >= startRow && bufRowAbs < startRow + VISIBLE_LINES) {
+                int screenRow = yCell + (bufRowAbs - startRow);
+                int cx = xCell * 8 + cursorCol * 8;
+                g.fill(cx, screenRow * 16 + 14, cx + 8, screenRow * 16 + 16, DosPalette.YELLOW);
+            }
         }
-    }
-    
-    public void insertTab() {
-        int stop = 4;
-        int pad  = stop - (input.length() % stop);
-        for (int i = 0; i < pad; i++) input.append(' ');
     }
 }

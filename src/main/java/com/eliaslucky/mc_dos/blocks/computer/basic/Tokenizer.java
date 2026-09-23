@@ -3,13 +3,13 @@ package com.eliaslucky.mc_dos.blocks.computer.basic;
 import java.util.*;
 
 public class Tokenizer {
-
     private static final Set<String> KEYWORDS = Set.of(
-            "PRINT", "LET", "IF", "THEN", "ELSE", "END",
+            "PRINT", "LET", "IF", "THEN", "ELSE", "END", "ENDIF",
             "FOR", "TO", "STEP", "NEXT", "GOTO", "GOSUB", "RETURN",
             "CLS", "REM", "INPUT", "SCREEN", "COLOR", "LOCATE",
             "PSET", "LINE", "CIRCLE", "STOP", "DATA", "READ",
-            "AND", "OR", "NOT", "MOD", "DIM", "AS", "SLEEP", "BEEP"
+            "AND", "OR", "NOT", "MOD", "DIM", "AS", "SLEEP", "BEEP",
+            "TRUE", "FALSE"
     );
 
     private final String src;

@@ -11,8 +11,14 @@ import java.util.List;
 public class HeadlessHost implements Host {
     private final List<String> lines = new ArrayList<>();
     private final StringBuilder current = new StringBuilder();
+    
+    private int lastErrorCode = -1;
+    private String lastErrorMessage = null;
 
     public List<String> getOutput() { return lines; }
+    public boolean hadError() { return lastErrorCode >= 0; }
+    public int getLastErrorCode() { return lastErrorCode; }
+    public String getLastErrorMessage() { return lastErrorMessage; }
 
     @Override
     public void print(String s) {
@@ -46,7 +52,9 @@ public class HeadlessHost implements Host {
 
     @Override
     public void runtimeError(int code, String message, int line) {
-        printNewline();
-        print("Runtime error " + code + " at line " + line + ": " + message);
+    	this.lastErrorCode = code;
+        this.lastErrorMessage = (message == null || message.isEmpty())
+                ? "Invalid syntax"
+                : message;
     }
 }

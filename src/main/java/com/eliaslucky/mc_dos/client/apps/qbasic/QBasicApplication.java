@@ -94,7 +94,7 @@ public class QBasicApplication extends AbstractEditorApplication {
             case DIALOG     -> " F1=Help  Enter=Execute  Esc=Cancel  Tab=Next Field  Arrow=Next Item ";
             case RUN_OUTPUT -> " Press any key to continue ";
             case EDITOR     -> (focus == Focus.IMMEDIATE)
-                    ? " Enter=Execute  Tab=Editor  Esc=Cancel "
+                    ? " Enter=Execute  F6=Editor  Esc=Cancel "
                     : " F1=Help  F2=Save  F5=Run  F6=Window  F10=Menu ";
         };
     }
@@ -174,7 +174,7 @@ public class QBasicApplication extends AbstractEditorApplication {
         switch (key) {
             case GLFW.GLFW_KEY_F2: saveFile(); return true;
             case GLFW.GLFW_KEY_F5: startRun(); return true;
-            case GLFW.GLFW_KEY_F6: focus = Focus.IMMEDIATE; return true;
+            case GLFW.GLFW_KEY_F6: focus = (focus == Focus.EDIT) ? Focus.IMMEDIATE : Focus.EDIT; return true;
         }
         return false;
     }
@@ -182,7 +182,13 @@ public class QBasicApplication extends AbstractEditorApplication {
     // Immediate pane
     private boolean handleImmediateKey(int key) {
         switch (key) {
+        	case GLFW.GLFW_KEY_F6:        focus = Focus.EDIT;    return true;
             case GLFW.GLFW_KEY_BACKSPACE: immediate.backspace(); return true;
+            case GLFW.GLFW_KEY_LEFT:      immediate.moveLeft();  return true;
+            case GLFW.GLFW_KEY_RIGHT:     immediate.moveRight(); return true;
+            case GLFW.GLFW_KEY_UP:        immediate.moveUp();    return true;
+            case GLFW.GLFW_KEY_DOWN:      immediate.moveDown();  return true;
+            case GLFW.GLFW_KEY_TAB:       immediate.insertTab(); return true;
             case GLFW.GLFW_KEY_ENTER:
             case GLFW.GLFW_KEY_KP_ENTER:
                 executeImmediateLine(immediate.consume());
@@ -196,14 +202,14 @@ public class QBasicApplication extends AbstractEditorApplication {
 
         // Collect output as text — do NOT hijack the main display.
         HeadlessHost headless = new HeadlessHost();
-        try {
-            new QBasicInterpreter(headless).run(line);
-            immediate.appendOutput(headless.getOutput());
-        } catch (com.eliaslucky.mc_dos.blocks.computer.basic.QBasicRuntimeException ex) {
-            showSyntaxError(ex.code, ex.getMessage());
-        } catch (RuntimeException ex) {
-            showSyntaxError(1, ex.getMessage() == null ? "Invalid syntax" : ex.getMessage());
+        new QBasicInterpreter(headless).run(line);
+        if (headless.hadError()) {
+            showSyntaxError(headless.getLastErrorCode(), headless.getLastErrorMessage());
+            // Do NOT clear the buffer — the user can fix and re-run.
+            return;
         }
+
+        immediate.appendOutput(headless.getOutput());
     }
     
     private void showSyntaxError(int errCode, String message) {
@@ -273,7 +279,7 @@ public class QBasicApplication extends AbstractEditorApplication {
         if (mode == Mode.RUN_OUTPUT) return true;
 
         if (mode == Mode.EDITOR && focus == Focus.IMMEDIATE) {
-            immediate.type(cp);
+            immediate.insert(cp);
             return true;
         }
         if (altHeld) return true;
