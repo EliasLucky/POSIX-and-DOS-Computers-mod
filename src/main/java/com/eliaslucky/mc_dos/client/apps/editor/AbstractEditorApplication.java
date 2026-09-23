@@ -39,10 +39,17 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     protected abstract String footerHints();
 
     // Layout
-    protected int topRow()     { return 1; }                    // below menu bar
-    protected int textRows()   { return rows() - 3; }           // minus menu + immediate + footer
-    protected int textCols()   { return cols() - 1; }           // minus vscrollbar
-    protected int immediateY() { return (rows() - 2) * CELL_H; } // row above footer
+    protected int menuRow()       { return 0; }
+    protected int headerRow()     { return 1; }
+    protected int textTopRow()    { return 2; }
+    protected int textRows()      { return rows() - 5; }   // rows 2 .. rows-4
+    protected int textCols() { return cols() - 1; }
+    protected int immediateRow()  { return rows() - 3; }   // input line
+    protected int dividerRow()    { return rows() - 2; }   // "───── Immediate ─────"
+    protected int footerRow()     { return rows() - 1; }
+    
+    protected boolean shouldDrawCursor() { return true; }
+    protected boolean modeIsEditor() { return true; }
 
     @Override protected void onResize() { clampScrollToCursor(); }
 
@@ -52,8 +59,10 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         g.fill(0, 0, appWidth, appHeight, DosPalette.BLUE);
 
         renderMenuBar(g);
+        renderHeader(g);
         renderEditorPane(g);
-        renderSplitterAndImmediate(g);
+        renderImmediateContent(g);
+        renderDivider(g);
         renderFooter(g);
 
         if (dialog != null) {
@@ -62,7 +71,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     }
 
     protected void renderEditorPane(GuiGraphics g) {
-        int baseY = topRow() * CELL_H;
+        int baseY = textTopRow() * CELL_H;
         int rows  = textRows();
         int cols  = textCols();
 
@@ -79,7 +88,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         }
 
         // Blinking cursor
-        if ((System.currentTimeMillis() / 500) % 2 == 0) {
+        if (shouldDrawCursor() && (System.currentTimeMillis() / 500) % 2 == 0) {
             int cr = cursorRow - scrollRow;
             int cc = cursorCol - scrollCol;
             if (cr >= 0 && cr < rows && cc >= 0 && cc < cols) {
@@ -91,7 +100,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     }
 
     /** Draws the "─────── Immediate ───────" splitter above the footer. */
-    protected void renderSplitterAndImmediate(GuiGraphics g) {
+    /*protected void renderSplitterAndImmediate(GuiGraphics g) {
         int y = immediateY();
         int w = cols();
         // Fill the strip with blue
@@ -109,11 +118,29 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         drawDos(g, label,            labelStart * CELL_W, y, DosPalette.WHITE);
         drawDos(g, right.toString(), (labelStart + label.length()) * CELL_W, y, DosPalette.WHITE);
         renderImmediateContent(g);
-    }
+    }*/
     
     protected void renderImmediateContent(GuiGraphics g) {
         // default: nothing
     }
+    
+    protected void renderDivider(GuiGraphics g) {
+        int y = dividerRow() * CELL_H;
+        g.fill(0, y, appWidth, y + CELL_H, DosPalette.BLUE);
+
+        String label = " Immediate ";
+        int labelStart = Math.max(0, (cols() - label.length()) / 2);
+        StringBuilder left  = new StringBuilder();
+        StringBuilder right = new StringBuilder();
+        for (int i = 0; i < labelStart; i++) left.append('\u2500');
+        for (int i = labelStart + label.length(); i < cols(); i++) right.append('\u2500');
+
+        drawDos(g, left.toString(),  0, y, DosPalette.WHITE);
+        drawDos(g, label,            labelStart * CELL_W, y, DosPalette.WHITE);
+        drawDos(g, right.toString(), (labelStart + label.length()) * CELL_W, y, DosPalette.WHITE);
+    }
+    
+    protected void renderHeader(GuiGraphics g) {}
 
     protected void renderFooter(GuiGraphics g) {
         int y = (rows() - 1) * CELL_H;
@@ -122,7 +149,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         String left = footerHints();
         drawDos(g, left, 0, y, DosPalette.BLACK);
 
-        String right = dialog != null ? "" :
+        String right = (dialog != null || !modeIsEditor()) ? "" :
                 (statusMessage.isEmpty() ? (modified ? " *Modified" : "")
                                          : " " + statusMessage + " ");
         if (!right.isEmpty()) {
@@ -216,6 +243,16 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         lines.add(cursorRow + 1, new StringBuilder(rest));
         cursorRow++; cursorCol = 0;
         modified = true; statusMessage = ""; clampScrollToCursor();
+    }
+    
+    protected void insertTab() {
+        int stop = 4;                         // QBASIC-ish 4-col stops; use 8 for authentic
+        int pad  = stop - (cursorCol % stop);
+        StringBuilder cur = lines.get(cursorRow);
+        for (int i = 0; i < pad; i++) cur.insert(cursorCol++, ' ');
+        modified = true;
+        statusMessage = "";
+        clampScrollToCursor();
     }
 
     // File I/O

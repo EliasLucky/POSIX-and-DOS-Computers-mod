@@ -47,6 +47,9 @@ public class DialogState {
             case GLFW.GLFW_KEY_KP_ENTER:
                 onAction(items.isEmpty() ? "close" : items.get(selected).action());
                 return true;
+            case GLFW.GLFW_KEY_TAB:
+                selected = (selected + 1) % Math.max(1, items.size());
+                return true;
             case GLFW.GLFW_KEY_ESCAPE:
                 onAction("close");
                 return true;

@@ -61,7 +61,23 @@ public class QBasicApplication extends AbstractEditorApplication {
     
     @Override
     protected void renderImmediateContent(GuiGraphics g) {
-        immediate.render(g, this, 0, (immediateY() / CELL_H) + 1, cols());
+        immediate.render(g, this, 0, immediateRow(), cols(),focus == Focus.IMMEDIATE);
+    }
+    
+    @Override
+    protected void renderHeader(GuiGraphics g) {
+        int w = cols();
+        String title = " " + filePath + " ";
+        int pad = (w - title.length()) / 2;
+        StringBuilder left  = new StringBuilder();
+        StringBuilder right = new StringBuilder();
+        for (int i = 0; i < pad; i++) left.append('\u2500');           // ─
+        for (int i = 0; i < w - pad - title.length(); i++) right.append('\u2500');
+
+        int y = CELL_H;                                                // row 1
+        drawDos(g, left.toString(),  0, y, DosPalette.LIGHT_GRAY);
+        drawDos(g, title,            pad * CELL_W, y, DosPalette.WHITE);
+        drawDos(g, right.toString(), (pad + title.length()) * CELL_W, y, DosPalette.LIGHT_GRAY);
     }
 
     @Override
@@ -129,7 +145,12 @@ public class QBasicApplication extends AbstractEditorApplication {
                     return true;
                 }
                 if (key == GLFW.GLFW_KEY_TAB) {
-                    focus = (focus == Focus.EDIT) ? Focus.IMMEDIATE : Focus.EDIT;
+                	if (focus == Focus.EDIT) {
+                        insertTab();
+                        return true;
+                    }
+                    // in immediate: tab is a no-op for now (or insert too)
+                    immediate.insertTab();
                     return true;
                 }
                 if (focus == Focus.IMMEDIATE) {
@@ -175,10 +196,29 @@ public class QBasicApplication extends AbstractEditorApplication {
 
         // Collect output as text — do NOT hijack the main display.
         HeadlessHost headless = new HeadlessHost();
-        new QBasicInterpreter(headless).run(line);
-        immediate.appendOutput(headless.getOutput());
-        // Stay in EDITOR mode. The result is shown inline.
+        try {
+            new QBasicInterpreter(headless).run(line);
+            immediate.appendOutput(headless.getOutput());
+        } catch (com.eliaslucky.mc_dos.blocks.computer.basic.QBasicRuntimeException ex) {
+            showSyntaxError(ex.code, ex.getMessage());
+        } catch (RuntimeException ex) {
+            showSyntaxError(1, ex.getMessage() == null ? "Invalid syntax" : ex.getMessage());
+        }
     }
+    
+    private void showSyntaxError(int errCode, String message) {
+        dialog = new DialogState()
+                .addLine("")
+                .addLine(message == null ? "Invalid syntax" : message)
+                .addLine("")
+                .addItem("OK",   "err.ok")
+                .addItem("Help", "err.help")
+                .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
+        pendingErrorCode = errCode;
+        mode = Mode.DIALOG;
+    }
+
+    private int pendingErrorCode = 2;
 
     private void invokeMenuAction(String action) {
         mode = Mode.EDITOR;
@@ -205,6 +245,22 @@ public class QBasicApplication extends AbstractEditorApplication {
                         .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
                 mode = Mode.DIALOG;
                 return;
+            case "err.ok":
+                dialog = null;
+                mode = Mode.EDITOR;
+                return;
+
+            case "err.help":
+                dialog = new DialogState()
+                        .addLine("")
+                        .addLine("ERR code: " + pendingErrorCode)
+                        .addLine("")
+                        .addLine("Press ENTER to continue")
+                        .addLine("")
+                        .addItem("OK", "err.ok")
+                        .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
+                mode = Mode.DIALOG;
+                return;
             default:
                 statusMessage = "(action: " + action + ")";
         }
@@ -222,6 +278,16 @@ public class QBasicApplication extends AbstractEditorApplication {
         }
         if (altHeld) return true;
         return super.charTyped(cp, mods);
+    }
+    
+    @Override
+    protected boolean shouldDrawCursor() {
+        return mode == Mode.EDITOR && focus == Focus.EDIT;
+    }
+    
+    @Override
+    protected boolean modeIsEditor() {
+        return mode == Mode.EDITOR;
     }
 
     // Run pipeline

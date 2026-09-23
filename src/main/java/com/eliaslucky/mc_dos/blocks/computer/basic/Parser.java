@@ -100,22 +100,71 @@ public class Parser {
         Expression cond = parseExpr();
         expectKeyword("THEN");
 
-        List<Statement> thenBody = new ArrayList<>();
-        while (!atEndOfStatement() && !peek().isKeyword("ELSE")) {
-            Statement s = parseStatement(line);
-            if (s != null) thenBody.add(s);
-            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) { advance(); continue; }
-            else break;
+        if (!atEndOfStatement()) {
+	        List<Statement> thenBody = new ArrayList<>();
+	        while (!atEndOfStatement() && !peek().isKeyword("ELSE")) {
+	            Statement s = parseStatement(line);
+	            if (s != null) thenBody.add(s);
+	            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) { advance(); continue; }
+	            else break;
+	        }
+	
+	        List<Statement> elseBody = new ArrayList<>();
+	        if (peek().isKeyword("ELSE")) {
+	            advance();
+	            while (!atEndOfStatement()) {
+	                Statement s = parseStatement(line);
+	                if (s != null) elseBody.add(s);
+	                if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) { advance(); continue; }
+	                else break;
+	            }
+	        }
+	        return new IfStmt(line, cond, thenBody, elseBody);
         }
-
+        skipLine();
+        return parseBlockIf(line, cond);
+    }
+    
+    private Statement parseBlockIf(int line, Expression cond) {
+        List<Statement> thenBody = new ArrayList<>();
         List<Statement> elseBody = new ArrayList<>();
-        if (peek().isKeyword("ELSE")) {
-            advance();
-            while (!atEndOfStatement()) {
-                Statement s = parseStatement(line);
-                if (s != null) elseBody.add(s);
-                if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) { advance(); continue; }
-                else break;
+        List<Statement> current  = thenBody;
+
+        while (true) {
+            skipNewlines();
+            if (peek().is(Token.TokenType.EOF)) break;   // unterminated: accept silently
+
+            // END IF
+            if (peek().isKeyword("END")) {
+                advance();
+                if (peek().isKeyword("IF")) { advance(); break; }
+                // plain END inside the block
+                current.add(new EndStmt(line));
+                continue;
+            }
+
+            // ELSE switches the active branch
+            if (peek().isKeyword("ELSE")) {
+                advance();
+                current = elseBody;
+                continue;
+            }
+
+            // Optional line number
+            int subLine = line;
+            if (peek().is(Token.TokenType.NUMBER)) {
+                try { subLine = (int) Double.parseDouble(peek().text()); } catch (Exception ignored) {}
+                advance();
+            }
+
+            Statement s = parseStatement(subLine);
+            if (s != null) current.add(s);
+            // Consume to end of line if the statement parser didn't.
+            while (!peek().is(Token.TokenType.NEWLINE)
+                   && !peek().is(Token.TokenType.EOF)
+                   && !peek().isKeyword("ELSE")
+                   && !peek().isKeyword("END")) {
+                advance();
             }
         }
         return new IfStmt(line, cond, thenBody, elseBody);
