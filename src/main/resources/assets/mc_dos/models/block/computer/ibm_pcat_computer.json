@@ -3,8 +3,8 @@
 	"format_version": "1.9.0",
 	"texture_size": [32, 32],
 	"textures": {
-		"0": "abstract_furniture:block/computer/white_ibm_pcat_computer",
-		"particle": "abstract_furniture:block/computer/white_ibm_pcat_computer"
+		"0": "mc_dos:block/computer/white_ibm_pcat_computer",
+		"particle": "mc_dos:block/computer/white_ibm_pcat_computer"
 	},
 	"elements": [
 		{

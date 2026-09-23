@@ -102,7 +102,7 @@ public class ComputerBlockEntity extends BlockEntity {
 	private void setupEnvironment() {
 		environment.clear();
 		environment.put("COMSPEC", "C:\\COMMAND.COM");
-		environment.put("PATH", computerType.commandProcessor instanceof AbstractDosCommandProcessor dos ? dos.defaultPath() : "");
+		environment.put("PATH", computerType.commandProcessor.defaultPath());
 		environment.put("PROMPT", "$P$G");
 }
 

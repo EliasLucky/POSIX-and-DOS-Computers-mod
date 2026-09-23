@@ -1,8 +1,8 @@
 {
 	"variants": {
-		"facing=north": { "model": "abstract_furniture:block/computer/white_ibm_pcat_computer" },
-		"facing=south": { "model": "abstract_furniture:block/computer/white_ibm_pcat_computer", "y": 180 },
-		"facing=west": { "model": "abstract_furniture:block/computer/white_ibm_pcat_computer", "y": 270 },
-		"facing=east": { "model": "abstract_furniture:block/computer/white_ibm_pcat_computer", "y": 90 }
+		"facing=north": { "model": "mc_dos:block/computer/white_ibm_pcat_computer" },
+		"facing=south": { "model": "mc_dos:block/computer/white_ibm_pcat_computer", "y": 180 },
+		"facing=west": { "model": "mc_dos:block/computer/white_ibm_pcat_computer", "y": 270 },
+		"facing=east": { "model": "mc_dos:block/computer/white_ibm_pcat_computer", "y": 90 }
 	}
 }

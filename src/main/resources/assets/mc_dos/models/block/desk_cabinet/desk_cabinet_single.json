@@ -3,8 +3,8 @@
 	"credit": "Made with Blockbench",
 	"parent": "block/block",
 	"textures": {
-		"0": "abstract_furniture:block/spruce_plank_top",
-		"particle": "abstract_furniture:block/spruce_plank_top"
+		"0": "mc_dos:block/spruce_plank_top",
+		"particle": "mc_dos:block/spruce_plank_top"
 	},
 	"elements": [
 		{

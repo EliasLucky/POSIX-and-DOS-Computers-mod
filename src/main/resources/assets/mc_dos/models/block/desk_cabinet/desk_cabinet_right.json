@@ -1,9 +1,9 @@
 {
 	"format_version": "1.9.0",
 	"textures": {
-		"0": "abstract_furniture:block/spruce_plank_top",
-		"1": "abstract_furniture:block/cabinet/white_cabinet",
-		"particle": "abstract_furniture:block/spruce_plank_top"
+		"0": "mc_dos:block/spruce_plank_top",
+		"1": "mc_dos:block/cabinet/white_cabinet",
+		"particle": "mc_dos:block/spruce_plank_top"
 	},
 	"elements": [
 		{

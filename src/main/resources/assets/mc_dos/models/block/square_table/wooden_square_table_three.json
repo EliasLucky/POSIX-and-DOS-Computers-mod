@@ -1,8 +1,8 @@
 {
 	"parent": "block/block",
 	"textures": {
-		"0": "abstract_furniture:block/wooden_square_table",
-		"particle": "abstract_furniture:block/wooden_square_table"
+		"0": "mc_dos:block/wooden_square_table",
+		"particle": "mc_dos:block/wooden_square_table"
 	},
 	"elements": [
 		{

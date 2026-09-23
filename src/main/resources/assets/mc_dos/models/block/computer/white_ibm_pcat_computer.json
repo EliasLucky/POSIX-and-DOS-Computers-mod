@@ -1,7 +1,7 @@
 {
-	"parent": "abstract_furniture:block/computer/ibm_pcat_computer",
+	"parent": "mc_dos:block/computer/ibm_pcat_computer",
 	"textures": {
-		"1": "abstract_furniture:block/computer/white_ibm_pcat_computer",
-		"particle": "abstract_furniture:block/computer/white_ibm_pcat_computer"
+		"1": "mc_dos:block/computer/white_ibm_pcat_computer",
+		"particle": "mc_dos:block/computer/white_ibm_pcat_computer"
 	}
 }
