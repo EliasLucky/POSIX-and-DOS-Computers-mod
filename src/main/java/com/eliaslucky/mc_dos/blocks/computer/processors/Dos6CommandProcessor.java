@@ -38,4 +38,20 @@ public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
 	public String getPrompt(String currentPath) {
 		return currentPath + ">";
 	}
+	
+	@Override
+	public String defaultFileContent(String fileName) {
+	    return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
+	        case "AUTOEXEC.BAT" ->
+	                "@ECHO OFF\n" +
+	                "PROMPT $P$G\n" +
+	                "PATH C:\\DOS;C:\\\n" +
+	                "SET TEMP=C:\\DOS";
+	        case "CONFIG.SYS" ->
+	                "FILES=30\n" +
+	                "BUFFERS=20\n" +
+	                "DEVICE=C:\\DOS\\HIMEM.SYS";
+	        default -> null;
+	    };
+	}
 }

@@ -1,11 +1,14 @@
 package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 import com.eliaslucky.mc_dos.AllBlockEntities;
 import com.eliaslucky.mc_dos.blocks.computer.processors.AbstractDosCommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
+import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -46,13 +49,54 @@ public class ComputerBlockEntity extends BlockEntity {
 	public Map<String, String> getEnvironment() { return environment; }
 	
 	private void setupDefaultFiles() {
-		fileSystem.setCurrentPath(computerType.defaultPath);
+		VirtualFileSystem vfs = fileSystem;
+	    vfs.getRoot().children.clear();
+
+	    ICommandProcessor proc = computerType.commandProcessor;
+
+	    for (String filePath : computerType.defaultFiles) {
+	        String normalized = filePath.replace('\\', '/');
+	        String[] segments = normalized.split("/");
+	        boolean isDir = filePath.endsWith("/") || filePath.endsWith("\\");
+
+	        VirtualFileSystem.Node dir = vfs.getRoot();
+	        for (int i = 0; i < segments.length - 1; i++) {
+	            String segName = segments[i].toUpperCase(Locale.ROOT);
+	            VirtualFileSystem.Node existing = dir.children.get(segName);
+	            if (existing == null) {
+	                existing = new VirtualFileSystem.Node(segName, true);
+	                dir.addChild(existing);
+	            }
+	            dir = existing;
+	        }
+
+	        String fileName = segments[segments.length - 1].toUpperCase(Locale.ROOT);
+	        if (dir.children.containsKey(fileName)) continue;
+
+	        VirtualFileSystem.Node node = new VirtualFileSystem.Node(fileName, isDir);
+
+	        if (!isDir) {
+	            // 1. Executables come from the registry, with the MZ header.
+	            ExecutableRegistry.Entry exe = ExecutableRegistry.get(fileName);
+	            if (exe != null) {
+	                node.content = exe.templateContent();
+	            } else {
+	                // 2. Everything else is the OS's responsibility.
+	                String content = proc.defaultFileContent(fileName);
+	                node.content = content != null ? content : "";
+	            }
+	        }
+	        dir.addChild(node);
+	    }
+
+	    vfs.setCurrentPath(computerType.defaultPath);
+		/*fileSystem.setCurrentPath(computerType.defaultPath);
 		for (String filePath : computerType.defaultFiles) {
 			boolean isDir = filePath.endsWith("/") || filePath.endsWith("\\");
 			String cleanName = filePath.replaceAll("[/\\\\]", "");
 			VirtualFileSystem.Node child = new VirtualFileSystem.Node(cleanName, isDir);
 			fileSystem.getCurrentDir().addChild(child);
-		}
+		}*/
 	}
 
 	private void setupEnvironment() {

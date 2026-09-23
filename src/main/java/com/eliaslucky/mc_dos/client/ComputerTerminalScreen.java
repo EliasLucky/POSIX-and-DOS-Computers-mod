@@ -43,12 +43,9 @@ public class ComputerTerminalScreen extends Screen {
 		this.computerType = computerType;
 		this.activePath = computerType.defaultPath;
 
-		history.add(computerType.biosString);
-		history.add(computerType.memoryString);
-		history.add(computerType.osVersion);
-		history.add("");
-		history.add(computerType.bootMessage);
-		history.add("");
+		for (String line : computerType.bootSequence) {
+	        history.add(line);
+	    }
 	}
 	
 	@Override

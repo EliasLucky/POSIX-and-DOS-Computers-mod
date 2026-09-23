@@ -126,4 +126,18 @@ public class LinuxCommandProcessor implements ICommandProcessor {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public String defaultFileContent(String fileName) {
+	    return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
+	        case "ETC/PASSWD" ->
+	                "root:x:0:0:root:/root:/bin/bash\n" +
+	                "daemon:x:1:1:daemon:/usr/sbin:/bin/sh\n" +
+	                "bin:x:2:2:bin:/bin:/bin/sh";
+	        case "ETC/FSTAB" ->
+	                "/dev/hda1  /      ext3  defaults,errors=remount-ro  0  1\n" +
+	                "/dev/hda2  none   swap  sw                          0  0";
+	        default -> null;
+	    };
+	}
 }
