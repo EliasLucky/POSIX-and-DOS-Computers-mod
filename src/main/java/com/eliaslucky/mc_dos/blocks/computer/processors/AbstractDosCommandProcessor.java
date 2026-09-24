@@ -133,7 +133,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 
 		if (targetDirNode.parent != null) {
 			VirtualFileSystem.Node dot	  = new VirtualFileSystem.Node(".",  true);
-			VirtualFileSystem.Node dotdot = new VirtualFileSystem.Node("..", true);
+			VirtualFileSystem.Node dotdot = new VirtualFileSystem.Node(".", true);
 			dot.modifiedTime	= targetDirNode.modifiedTime;
 			dotdot.modifiedTime = targetDirNode.parent.modifiedTime;
 			out.append(row.apply(dot));
@@ -175,7 +175,8 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		}
 		if (parent == null || !parent.isDirectory) return "Path not found";
 		if (name.isEmpty()) return "Invalid directory name";
-		String upper = name.toUpperCase(Locale.ROOT);
+		String upper = vfs.canonicalize(name);
+		if (upper.isEmpty()) return "Invalid directory name";
 		if (parent.children.containsKey(upper)) return "Directory already exists";
 		VirtualFileSystem.Node folder = new VirtualFileSystem.Node(upper, true);
 		parent.addChild(folder);
@@ -245,7 +246,8 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		if (destParent == null || !destParent.isDirectory) return "Path not found";
 		if (destFileName.isEmpty()) return "Invalid file name";
 
-		String upperDest = destFileName.toUpperCase(Locale.ROOT);
+		String upperDest = vfs.canonicalize(destFileName);
+		if (upperDest.isEmpty()) return "Invalid file name";
 		VirtualFileSystem.Node copied = new VirtualFileSystem.Node(upperDest, false);
 		copied.content = srcNode.content;
 		copied.modifiedTime = System.currentTimeMillis();
@@ -275,7 +277,8 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		VirtualFileSystem.Node parent = target.parent;
 		if (parent == null) return "Permission denied";
 
-		String upperNew = newName.toUpperCase(Locale.ROOT);
+		String upperNew = vfs.canonicalize(newName);
+		if (upperNew.isEmpty()) return "Invalid file name";
 		if (parent.children.containsKey(upperNew)) {
 			return "Duplicate file name or file not found";
 		}

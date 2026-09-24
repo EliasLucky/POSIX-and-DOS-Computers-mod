@@ -38,6 +38,7 @@ public class ComputerBlockEntity extends BlockEntity {
 
 	public void setComputerType(ComputerType type) {
 		this.computerType = type;
+		fileSystem.setPolicy(type.commandProcessor.fileNamePolicy());
 		if (!initializedDefaults) {
 			setupDefaultFiles();
 			setupEnvironment();

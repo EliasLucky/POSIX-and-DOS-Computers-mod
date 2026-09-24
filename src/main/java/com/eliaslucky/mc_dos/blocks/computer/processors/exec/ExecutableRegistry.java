@@ -41,15 +41,14 @@ public final class ExecutableRegistry {
 
 		register("QBASIC", MZ + "Microsoft QuickBASIC\nVersion 1.1\n", (c, a, f) -> {
 			String requested = a.isEmpty() ? "UNTITLED.BAS" : a;
-			String file = VirtualFileSystem.toShortName(requested);
+			String file = c.getFileSystem().canonicalize(a.isEmpty() ? "UNTITLED.BAS" : a);
 			if (file.isEmpty()) file = "UNTITLED.BAS";
-			VirtualFileSystem vfs = c.getFileSystem();
-			VirtualFileSystem.Node node = vfs.resolvePath(file);
+			VirtualFileSystem.Node node = c.getFileSystem().resolvePath(file);
 			if (node == null) {
-				node = new VirtualFileSystem.Node(file.toUpperCase(Locale.ROOT), false);
-				node.content = "CLS\n";		// template
-				vfs.getCurrentDir().addChild(node);
-				c.setChanged();
+			    node = new VirtualFileSystem.Node(file, false);
+			    node.content = "CLS\n";
+			    c.getFileSystem().getCurrentDir().addChild(node);
+			    c.setChanged();
 			}
 			return "APP_LAUNCH:QBASIC:" + file + ":" + node.content;
 		});

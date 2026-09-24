@@ -61,6 +61,7 @@ public class ServerboundFileWritePacket {
                 String cleanPath = this.path.replace('/', '\\');
                 int lastSlash = cleanPath.lastIndexOf('\\');
                 String name = (lastSlash == -1) ? cleanPath : cleanPath.substring(lastSlash + 1);
+                name = computer.getFileSystem().canonicalize(name);
                 if (name.isEmpty()) return;
 
                 VirtualFileSystem.Node parent = vfs.getCurrentDir();
@@ -72,7 +73,7 @@ public class ServerboundFileWritePacket {
                 }
                 if (parent == null || !parent.isDirectory) return;
 
-                node = new VirtualFileSystem.Node(name.toUpperCase(Locale.ROOT), false);
+                node = new VirtualFileSystem.Node(name, false);
                 parent.addChild(node);
             }
 
