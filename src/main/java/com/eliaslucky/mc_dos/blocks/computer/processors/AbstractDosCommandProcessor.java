@@ -131,7 +131,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 
 		if (targetDirNode.parent != null) {
 			VirtualFileSystem.Node dot	  = new VirtualFileSystem.Node(".",  true);
-			VirtualFileSystem.Node dotdot = new VirtualFileSystem.Node(".", true);
+			VirtualFileSystem.Node dotdot = new VirtualFileSystem.Node("..", true);
 			dot.modifiedTime	= targetDirNode.modifiedTime;
 			dotdot.modifiedTime = targetDirNode.parent.modifiedTime;
 			out.append(row.apply(dot));
