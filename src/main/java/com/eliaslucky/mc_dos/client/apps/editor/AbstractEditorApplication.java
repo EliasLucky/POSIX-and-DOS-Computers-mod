@@ -44,7 +44,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     protected int textTopRow()    { return 2; }
     protected int textRows()      { return rows() - 8; }   // rows 2 .. rows-4
     protected int textCols() { return cols() - 1; }
-    protected int immediateRow()  { return rows() - 6; }   // input line
+    protected int immediateRow()  { return rows() - 3; }   // input line
     protected int dividerRow()    { return rows() - 4; }   // "───── Immediate ─────"
     protected int footerRow()     { return rows() - 1; }
     
