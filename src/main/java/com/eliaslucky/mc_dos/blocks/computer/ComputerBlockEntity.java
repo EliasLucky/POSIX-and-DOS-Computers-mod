@@ -131,7 +131,21 @@ public class ComputerBlockEntity extends BlockEntity {
 		environment.put("PATH", computerType.commandProcessor.defaultPath());
 		environment.put("PROMPT", "$P$G");
 }
+	
+	public String executeLine(String rawLine) {
+	    ShellDialect dialect = computerType.commandProcessor.shellDialect(kernel);
+	    if (dialect == null) {
+	        // No dialect — fall back to direct processing, no pipes.
+	        return computerType.commandProcessor.process(this, rawLine);
+	    }
+	    Pipeline pipeline = dialect.parse(rawLine);
+	    if (pipeline.isEmpty()) return "";
 
+	    StreamResolver resolver = new DosStreamResolver();   // override per OS later
+	    return new PipelineExecutor(resolver).execute(pipeline, this);
+	}
+
+	/** for internal use and the immediate pane. */
 	public String processCommand(String rawInput) {
 		return computerType.commandProcessor.process(this, rawInput);
 	}

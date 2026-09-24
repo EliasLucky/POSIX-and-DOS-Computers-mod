@@ -40,7 +40,7 @@ public class ServerboundCommandPacket {
 			BlockEntity be = level.getBlockEntity(this.pos);
 
 			if (be instanceof ComputerBlockEntity computer) {
-				String output = computer.processCommand(this.command);
+				String output = computer.executeLine(this.command);
 				String currentPath = computer.getFileSystem().getCurrentPath();
 				
 				ModMessages.sendToPlayer(new ClientboundTerminalOutputPacket(output, currentPath), player);

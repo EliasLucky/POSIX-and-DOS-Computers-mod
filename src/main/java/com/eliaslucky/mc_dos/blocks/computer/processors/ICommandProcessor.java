@@ -1,6 +1,7 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
+import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
 
@@ -26,4 +27,12 @@ public interface ICommandProcessor {
      * Return null for a minimal shell with no kernel (e.g. a ROM BASIC).
      */
     default Kernel createKernel() { return null; }
+    default ShellDialect shellDialect(Kernel kernel) { return null; }
+    /**
+     * Process with stdin available. The default forwards to `process`,
+     * ignoring stdin — correct for shells that don't yet support pipes.
+     */
+    default String processWithStdin(ComputerBlockEntity computer, String rawInput, String stdin) {
+        return process(computer, rawInput);   // default: ignore stdin
+    }
 }
