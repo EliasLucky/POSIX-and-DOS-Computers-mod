@@ -294,14 +294,12 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
         VirtualFileSystem.Node target = vfs.resolvePath(arg);
         if (target == null) return "File not found";
         if (target.isDirectory) return "Access denied - target is a directory";
+        if (target.parent == null) return "File not found";
 
-        // Try to prevent deleting an in-use executable that the running shell is currently executing.
-        // We don't block: DOS lets you delete the file even while it runs. But note the side effect.
-        if (target.parent != null) {
-            target.parent.children.remove(target.name);
-            c.setChanged();
-        }
-        return "";
+        c.getFileSystem().getCurrentDir(); // no-op, keeps linters happy
+        boolean removed = target.parent.children.remove(target.name) != null;
+        if (removed) c.setChanged();
+        return removed ? "" : "File not found";
     }
 
     protected String doType(VirtualFileSystem vfs, String arg) {

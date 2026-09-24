@@ -122,6 +122,42 @@ public class VirtualFileSystem {
 			this.currentDir = (found != null && found.isDirectory) ? found : root;
 		}
 	}
+	
+	/**
+	 * Normalize a user-supplied filename into MS-DOS 8.3 short form.
+	 * Uppercases, strips disallowed characters, truncates the base to 8
+	 * and the extension to 3 at the last dot.
+	 */
+	public static String toShortName(String raw) {
+	    if (raw == null || raw.isEmpty()) return "";
+
+	    // Take only the last path component.
+	    String s = raw.replace('\\', '/');
+	    int slash = s.lastIndexOf('/');
+	    if (slash >= 0) s = s.substring(slash + 1);
+
+	    s = s.toUpperCase(Locale.ROOT);
+
+	    String base, ext = "";
+	    int dot = s.lastIndexOf('.');
+	    if (dot >= 0) {
+	        base = s.substring(0, dot);
+	        ext  = s.substring(dot + 1);
+	    } else {
+	        base = s;
+	    }
+
+	    // Strip characters MS-DOS doesn't allow in filenames.
+	    // Allowed: A-Z 0-9 ! # $ % & ' ( ) - @ ^ _ ` { } ~
+	    base = base.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
+	    ext  = ext.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
+
+	    if (base.length() > 8) base = base.substring(0, 8);
+	    if (ext.length()  > 3) ext  = ext.substring(0, 3);
+
+	    if (base.isEmpty() && ext.isEmpty()) return "";
+	    return ext.isEmpty() ? base : base + "." + ext;
+	}
 
 	public static class Node {
 		public String name;
@@ -134,14 +170,14 @@ public class VirtualFileSystem {
 		public long modifiedTime = System.currentTimeMillis();
 
 		public Node(String name, boolean isDirectory) {
-			this.name = name;
+			this.name = (name == null) ? "" : name.toUpperCase(Locale.ROOT);
 			this.isDirectory = isDirectory;
 			this.content = "";
 		}
 
 		public void addChild(Node child) {
 			child.parent = this;
-			children.put(child.name.toUpperCase(Locale.ROOT), child);
+			children.put(child.name, child);
 		}
 
 		public CompoundTag save() {
@@ -164,7 +200,7 @@ public class VirtualFileSystem {
 			Node node = new Node(tag.getString("Name"), tag.getBoolean("IsDir"));
 			node.content = tag.getString("Content");
 			node.createdTime  = tag.contains("Created")  ? tag.getLong("Created")  : System.currentTimeMillis();
-				node.modifiedTime = tag.contains("Modified") ? tag.getLong("Modified") : node.createdTime;
+			node.modifiedTime = tag.contains("Modified") ? tag.getLong("Modified") : node.createdTime;
 			node.parent = parentNode;
 
 			ListTag childrenList = tag.getList("Children", Tag.TAG_COMPOUND);

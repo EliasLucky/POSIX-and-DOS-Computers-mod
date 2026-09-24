@@ -233,11 +233,11 @@ public class Parser {
         Expression x = parseExpr();
         expectPunct(",");
         Expression y = parseExpr();
+        expectPunct(")");
         Expression color = null;
         if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
             advance(); color = parseExpr();
         }
-        expectPunct(")");
         return new PsetStmt(line, x, y, color);
     }
 

@@ -41,7 +41,9 @@ public final class ExecutableRegistry {
                 c.getComputerType().osVersion);
 
         register("QBASIC", MZ + "Microsoft QuickBASIC\nVersion 1.1\n", (c, a, f) -> {
-            String file = a.isEmpty() ? "UNTITLED.BAS" : a;
+            String requested = a.isEmpty() ? "UNTITLED.BAS" : a;
+            String file = VirtualFileSystem.toShortName(requested);
+            if (file.isEmpty()) file = "UNTITLED.BAS";
             VirtualFileSystem vfs = c.getFileSystem();
             VirtualFileSystem.Node node = vfs.resolvePath(file);
             if (node == null) {
