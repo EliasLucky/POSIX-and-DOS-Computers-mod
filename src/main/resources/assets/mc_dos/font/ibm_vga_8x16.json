@@ -4,7 +4,7 @@
       "type": "bitmap",
       "file": "mc_dos:font/ibm_vga_8x16.png",
       "height": 16,
-      "ascent": 12,
+      "ascent": 8,
       "chars": [
         " !\"#$%&'()*+,-./",
         "0123456789:;<=>?",
@@ -18,7 +18,7 @@
       "type": "bitmap",
       "file": "mc_dos:font/ibm_vga_8x16_dos.png",
       "height": 16,
-      "ascent": 12,
+      "ascent": 8,
       "chars": [
         "\u2591\u2592\u2593\u2502\u2524\u2561\u2562\u2556\u2555\u2563\u2551\u2557\u255D\u255C\u255B\u2510",
         "\u2514\u2534\u252C\u251C\u2500\u253C\u255E\u255F\u255A\u2554\u2569\u2566\u2560\u2550\u256C\u2567",

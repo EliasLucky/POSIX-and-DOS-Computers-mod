@@ -42,10 +42,10 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     protected int menuRow()       { return 0; }
     protected int headerRow()     { return 1; }
     protected int textTopRow()    { return 2; }
-    protected int textRows()      { return rows() - 5; }   // rows 2 .. rows-4
+    protected int textRows()      { return rows() - 8; }   // rows 2 .. rows-4
     protected int textCols() { return cols() - 1; }
-    protected int immediateRow()  { return rows() - 3; }   // input line
-    protected int dividerRow()    { return rows() - 2; }   // "───── Immediate ─────"
+    protected int immediateRow()  { return rows() - 6; }   // input line
+    protected int dividerRow()    { return rows() - 4; }   // "───── Immediate ─────"
     protected int footerRow()     { return rows() - 1; }
     
     protected boolean shouldDrawCursor() { return true; }
@@ -295,11 +295,23 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         scrollCol = Math.max(0, Math.min(scrollCol, Math.max(0, maxLineLength() - cols)));
     }
 
-    // Drawing helper — all subclasses should use this
+    // Drawing helper - all subclasses should use this
     public void drawDos(GuiGraphics g, String text, int x, int y, int color) {
-        g.drawString(Minecraft.getInstance().font,
+    	if (text == null || text.isEmpty()) return;
+	    var mcFont = Minecraft.getInstance().font;
+	    var style  = screen.getDosStyle();
+
+	    for (int i = 0; i < text.length(); i++) {
+	        char c = text.charAt(i);
+	        if (c == ' ') continue;              // spaces advance by the math below
+	        g.drawString(mcFont,
+	            Component.literal(String.valueOf(c)).withStyle(style),
+	            x + i * CELL_W, y,
+	            color, false);
+	    }
+        /*g.drawString(Minecraft.getInstance().font,
                 Component.literal(text).withStyle(screen.getDosStyle()),
-                x, y, color, false);
+                x, y, color, false);*/
     }
 
     public String getFilePath() { return filePath; }

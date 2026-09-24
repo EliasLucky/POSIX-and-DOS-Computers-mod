@@ -25,6 +25,8 @@ public class QBasicApplication extends AbstractEditorApplication {
     private QBasicHostImpl    host;
 
     private boolean altHeld = false;
+    private boolean consumingMenuKeystroke = false;
+    private boolean pendingExit = false;
 
     // Snapshot of the source so we can restore the editor after the run.
     private String pendingSourceSnapshot;
@@ -47,6 +49,11 @@ public class QBasicApplication extends AbstractEditorApplication {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    	if (pendingExit) {
+            pendingExit = false;
+            screen.returnToShell();
+            return;
+        }
         if (mode == Mode.RUN_OUTPUT) {
             // Full-screen takeover: the display mode IS the output surface.
             g.fill(0, 0, appWidth, appHeight, DosPalette.BLACK);
@@ -104,9 +111,9 @@ public class QBasicApplication extends AbstractEditorApplication {
         boolean isAltKey = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
         boolean altMod   = (mods & GLFW.GLFW_MOD_ALT) != 0;
         altHeld = isAltKey || altMod;
+        consumingMenuKeystroke = false;
 
         switch (mode) {
-
             case RUN_OUTPUT:
                 mode = Mode.EDITOR;
                 restoreEditorAfterRun();
@@ -114,10 +121,14 @@ public class QBasicApplication extends AbstractEditorApplication {
 
             case MENU: {
                 String action = menuBar.handleKey(key);
-                if (action == null || action.equals("__close__")) {
+                if (action == null) {
+                	return true;
+                }
+                if (action.equals("__close__")) {
                     mode = Mode.EDITOR;
                     return true;
                 }
+            	if (isPrintableKey(key)) consumingMenuKeystroke = true;
                 invokeMenuAction(action);
                 return true;
             }
@@ -196,6 +207,23 @@ public class QBasicApplication extends AbstractEditorApplication {
         }
         return false;
     }
+    
+    private static boolean isPrintableKey(int key) {
+        return (key >= GLFW.GLFW_KEY_A && key <= GLFW.GLFW_KEY_Z)
+            || (key >= GLFW.GLFW_KEY_0 && key <= GLFW.GLFW_KEY_9)
+            || key == GLFW.GLFW_KEY_SPACE
+            || key == GLFW.GLFW_KEY_MINUS
+            || key == GLFW.GLFW_KEY_EQUAL
+            || key == GLFW.GLFW_KEY_LEFT_BRACKET
+            || key == GLFW.GLFW_KEY_RIGHT_BRACKET
+            || key == GLFW.GLFW_KEY_SEMICOLON
+            || key == GLFW.GLFW_KEY_APOSTROPHE
+            || key == GLFW.GLFW_KEY_GRAVE_ACCENT
+            || key == GLFW.GLFW_KEY_BACKSLASH
+            || key == GLFW.GLFW_KEY_COMMA
+            || key == GLFW.GLFW_KEY_PERIOD
+            || key == GLFW.GLFW_KEY_SLASH;
+    }
 
     private void executeImmediateLine(String line) {
         if (line == null || line.isBlank()) return;
@@ -230,7 +258,8 @@ public class QBasicApplication extends AbstractEditorApplication {
         mode = Mode.EDITOR;
         switch (action) {
             case "file.exit":
-                screen.returnToShell();
+            	pendingExit = true;
+                //screen.returnToShell();
                 return;
             case "file.save":
                 saveFile();
@@ -274,6 +303,10 @@ public class QBasicApplication extends AbstractEditorApplication {
 
     @Override
     public boolean charTyped(char cp, int mods) {
+    	if (consumingMenuKeystroke) {
+            consumingMenuKeystroke = false;
+            return true;
+        }
         if (mode == Mode.MENU)       return true;
         if (mode == Mode.DIALOG)     return true;
         if (mode == Mode.RUN_OUTPUT) return true;
