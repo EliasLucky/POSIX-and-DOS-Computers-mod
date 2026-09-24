@@ -41,11 +41,20 @@ public class VirtualFileSystem {
 	public Node getCurrentDir() { return currentDir; }
 	public String getCurrentPath() { return currentPath; }
 	public void setCurrentPath(String path) {
-		this.currentPath = path;
 		Node resolved = resolvePath(path);
-		if (resolved != null && resolved.isDirectory) {
-			this.currentDir = resolved;
-		}
+		if (resolved == null || !resolved.isDirectory) {
+	        // Invalid path — silently keep the current directory.
+	        // DOS would print "Invalid directory" here, but that's the
+	        // caller's job (doCd). The VFS itself refuses to move.
+	        return;
+	    }
+	    this.currentDir  = resolved;
+	    this.currentPath = getAbsolutePath(resolved);
+		//this.currentPath = path;
+		//Node resolved = resolvePath(path);
+		//if (resolved != null && resolved.isDirectory) {
+		//	this.currentDir = resolved;
+		//}
 	}
 
 	public Node resolvePath(String path) {
@@ -115,11 +124,13 @@ public class VirtualFileSystem {
 			this.root.children.clear();
 			this.root.children.putAll(loadedRoot.children);
 		}
-		if (tag.contains("CurrentPath")) {
-			this.currentPath = tag.getString("CurrentPath");
-			Node found = resolvePath(this.currentPath);
-			this.currentDir = (found != null && found.isDirectory) ? found : root;
-		}
+		this.currentDir = root;
+	    this.currentPath = "/";
+		//if (tag.contains("CurrentPath")) {
+		//	this.currentPath = tag.getString("CurrentPath");
+		//	Node found = resolvePath(this.currentPath);
+		//	this.currentDir = (found != null && found.isDirectory) ? found : root;
+		//}
 	}
 	
 	/**

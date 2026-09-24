@@ -61,6 +61,12 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 				}
 				return InteractionResult.FAIL;
 			}
+			
+			if (!level.isClientSide()) {
+		        // Boot fresh every time the terminal opens.
+		        computerBE.getFileSystem().setCurrentPath(computerBE.getComputerType().defaultPath);
+		        computerBE.setChanged();
+		    }
 
 			if (level.isClientSide()) {
 				net.minecraft.client.Minecraft.getInstance().setScreen(new ComputerTerminalScreen(pos, this.computerType));
