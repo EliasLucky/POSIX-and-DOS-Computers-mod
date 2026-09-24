@@ -6,12 +6,3 @@ public interface PeripheralBus {
 
     Peripheral get(PeripheralAddress addr);
 }
-
-/** A stable way to name a peripheral across scans. */
-public record PeripheralAddress(
-        String deviceClass,
-        String vendorId,
-        String productId,
-        int slot,                     // Nth peripheral of this class on the bus
-        BlockPos worldPos             // actual block, for reference
-) {}

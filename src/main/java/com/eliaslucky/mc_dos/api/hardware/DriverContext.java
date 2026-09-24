@@ -1,20 +1,23 @@
-public interface DriverContext {
+package com.eliaslucky.mc_dos.api.hardware;
 
-    /** The bus to scan for hardware. */
+import java.util.Map;
+
+public interface DriverContext {
     PeripheralBus bus();
 
-    /** Command-line / config parameters passed at load time.
-     *  DOS: "DEVICE=... /PORT=0 /IRQ=5" gives {"PORT":"0","IRQ":"5"}
-     *  Linux: "modprobe mccmd port=0" gives {"port":"0"}
-     */
+    /** Params passed at load time. DOS: from CONFIG.SYS. Linux: from modprobe. */
     Map<String, String> loadParams();
 
-    /** Register a name in the OS's device namespace.
-     *  DOS: name="MCCMD" → accessible as a device name
-     *  Linux: name="mccmd0" → appears as /dev/mccmd0
+    /**
+     * Register a device in the OS's namespace.
+     * DOS:  name = "MCCMD" → accessible as a device name
+     * UNIX: name = "mccmd" → /dev/mccmd, major/minor allocated by kernel
+     * Linux: baseName = "mccmd" → /dev/mccmd0, /dev/mccmd1, ...
+     *
+     * Returns the actual name allocated (may include an index).
      */
-    void registerDevice(String name, DeviceHandler handler);
+    String registerDevice(String name, DeviceHandler handler);
 
-    /** Log a boot message. DOS: screen; Linux: dmesg. */
+    /** Boot-time log. DOS prints to the console; Linux appends to dmesg. */
     void log(String message);
 }

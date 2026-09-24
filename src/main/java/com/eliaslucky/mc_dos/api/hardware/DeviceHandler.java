@@ -1,3 +1,5 @@
+package com.eliaslucky.mc_dos.api.hardware;
+
 public interface DeviceHandler {
     /** Called when an application writes to this device. */
     void onWrite(byte[] data);

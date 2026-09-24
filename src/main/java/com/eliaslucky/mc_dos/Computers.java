@@ -38,6 +38,11 @@ public class Computers
        
 		modEventBus.addListener(this::commonSetup);
 		modEventBus.addListener(this::buildContents);
+		
+		//DriverRegistry.register("dos", "MCCMD", DosMccmdDriver::new);
+		// Later:
+		//DriverRegistry.register("unix", "MCCMD", UnixMccmdDriver::new);
+		//DriverRegistry.register("linux", "MCCMD", LinuxMccmdDriver::new);
         
 		MinecraftForge.EVENT_BUS.register(this);     
 	}

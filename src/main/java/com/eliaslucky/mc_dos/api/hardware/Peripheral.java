@@ -7,6 +7,9 @@ public interface Peripheral {
     /** Vendor / product identifiers, PCI-style. */
     String vendorId();       // "mc_dos"
     String productId();      // "mccmd_v1"
+    
+    /** Human-readable name for /proc/devices, DOS LIST, etc. */
+    String description();
 
     /** Push bytes to the device. */
     void write(byte[] data);

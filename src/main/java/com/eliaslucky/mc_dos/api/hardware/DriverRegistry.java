@@ -1,5 +1,9 @@
 package com.eliaslucky.mc_dos.api.hardware;
 
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 public final class DriverRegistry {
 
     /** OS family = "dos" or "posix". Addons extend by adding new families. */

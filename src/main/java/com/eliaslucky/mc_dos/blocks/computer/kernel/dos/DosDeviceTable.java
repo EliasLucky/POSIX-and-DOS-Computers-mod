@@ -20,6 +20,11 @@ public class DosDeviceTable {
     public DeviceHandler lookup(String name) {
         return devices.get(name.toUpperCase(Locale.ROOT));
     }
+    
+    public boolean contains(String name) {
+        return devices.containsKey(name.toUpperCase(Locale.ROOT));
+    }
 
     public List<String> names() { return List.copyOf(devices.keySet()); }
+    public void clear() { devices.clear(); }
 }
