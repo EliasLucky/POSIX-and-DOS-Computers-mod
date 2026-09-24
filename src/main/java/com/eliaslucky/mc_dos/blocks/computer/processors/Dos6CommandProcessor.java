@@ -2,10 +2,16 @@ package com.eliaslucky.mc_dos.blocks.computer.processors;
 
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.fs.DosFileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
 
 // MS-DOS 6.0
 public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
 	@Override public String defaultPath() { return "C:\\DOS;C:\\"; }
+	@Override
+	public FileNamePolicy fileNamePolicy() {
+		return DosFileNamePolicy.INSTANCE;
+	}
 
 	@Override protected boolean supportsSlashQuestionHelp() { return true; }
 
@@ -41,17 +47,17 @@ public class Dos6CommandProcessor extends AbstractDosCommandProcessor {
 	
 	@Override
 	public String defaultFileContent(String fileName) {
-	    return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
-	        case "AUTOEXEC.BAT" ->
-	                "@ECHO OFF\n" +
-	                "PROMPT $P$G\n" +
-	                "PATH C:\\DOS;C:\\\n" +
-	                "SET TEMP=C:\\DOS";
-	        case "CONFIG.SYS" ->
-	                "FILES=30\n" +
-	                "BUFFERS=20\n" +
-	                "DEVICE=C:\\DOS\\HIMEM.SYS";
-	        default -> null;
-	    };
+		return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
+			case "AUTOEXEC.BAT" ->
+					"@ECHO OFF\n" +
+					"PROMPT $P$G\n" +
+					"PATH C:\\DOS;C:\\\n" +
+					"SET TEMP=C:\\DOS";
+			case "CONFIG.SYS" ->
+					"FILES=30\n" +
+					"BUFFERS=20\n" +
+					"DEVICE=C:\\DOS\\HIMEM.SYS";
+			default -> null;
+		};
 	}
 }

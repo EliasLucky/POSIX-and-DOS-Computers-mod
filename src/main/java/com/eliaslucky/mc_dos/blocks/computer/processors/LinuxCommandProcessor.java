@@ -2,9 +2,15 @@ package com.eliaslucky.mc_dos.blocks.computer.processors;
 
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.fs.PosixFileNamePolicy;
 
 // TODO: SCRAP THIS
 public class LinuxCommandProcessor implements ICommandProcessor {
+	@Override
+	public FileNamePolicy fileNamePolicy() {
+		return PosixFileNamePolicy.INSTANCE;
+	}
 	@Override
 	public String getPrompt(String currentPath) {
 		return "root@p4-server:" + currentPath + "# ";
@@ -129,15 +135,15 @@ public class LinuxCommandProcessor implements ICommandProcessor {
 	
 	@Override
 	public String defaultFileContent(String fileName) {
-	    return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
-	        case "ETC/PASSWD" ->
-	                "root:x:0:0:root:/root:/bin/bash\n" +
-	                "daemon:x:1:1:daemon:/usr/sbin:/bin/sh\n" +
-	                "bin:x:2:2:bin:/bin:/bin/sh";
-	        case "ETC/FSTAB" ->
-	                "/dev/hda1  /      ext3  defaults,errors=remount-ro  0  1\n" +
-	                "/dev/hda2  none   swap  sw                          0  0";
-	        default -> null;
-	    };
+		return switch (fileName.toUpperCase(java.util.Locale.ROOT)) {
+			case "ETC/PASSWD" ->
+					"root:x:0:0:root:/root:/bin/bash\n" +
+					"daemon:x:1:1:daemon:/usr/sbin:/bin/sh\n" +
+					"bin:x:2:2:bin:/bin:/bin/sh";
+			case "ETC/FSTAB" ->
+					"/dev/hda1	/	   ext3  defaults,errors=remount-ro  0	1\n" +
+					"/dev/hda2	none   swap  sw							 0	0";
+			default -> null;
+		};
 	}
 }

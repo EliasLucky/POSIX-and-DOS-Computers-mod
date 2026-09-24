@@ -8,16 +8,35 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.fs.PosixFileNamePolicy;
+
 public class VirtualFileSystem {
+	private FileNamePolicy policy;
 	private final Node root;
 	private Node currentDir;
 	private String currentPath = "/";
 
+	/** Default to POSIX until an OS is bound. */
 	public VirtualFileSystem() {
-		root = new Node("/", true);
-		currentDir = root;
+		this(PosixFileNamePolicy.INSTANCE);
+	}
+	
+	public VirtualFileSystem(FileNamePolicy policy) {
+		this.policy = policy;
+		this.root = new Node("/", true);
+		this.currentDir = root;
 	}
 
+	public FileNamePolicy getPolicy()		   { return policy; }
+	public void setPolicy(FileNamePolicy p)    { this.policy = p; }
+	public String canonicalize(String rawName) { return policy.canonicalize(rawName); }
+	public Node newFile(String rawName) {
+		return new Node(policy.canonicalize(rawName), false);
+	}
+	public Node newDirectory(String rawName) {
+		return new Node(policy.canonicalize(rawName), true);
+	}
 	public Node getRoot() { return root; }
 	public Node getCurrentDir() { return currentDir; }
 	public String getCurrentPath() { return currentPath; }
@@ -50,36 +69,18 @@ public class VirtualFileSystem {
 
 		if (cleanPath.isEmpty()) return root;
 
-		String[] segments = cleanPath.split("/+");
-		Node current = startNode;
-
-		for (String segment : segments) {
-			if (segment.isEmpty() || segment.equals(".")) {
-				continue;
-			}
+		for (String segment : cleanPath.split("/+")) {
+			if (segment.isEmpty() || segment.equals(".")) continue;
 			if (segment.equals("..")) {
-				if (current.parent != null) {
-					current = current.parent;
-				}
+				if (startNode.parent != null) startNode = startNode.parent;
 				continue;
 			}
-
-			// Case-insensitive lookup for DOS compatibility
-			Node child = null;
-			for (Map.Entry<String, Node> entry : current.children.entrySet()) {
-				if (entry.getKey().equalsIgnoreCase(segment)) {
-					child = entry.getValue();
-					break;
-				}
-			}
-
-			if (child == null) {
-				return null; // Segment not found
-			}
-			current = child;
+			String key = policy.lookupKey(segment);
+			Node child = startNode.children.get(key);
+			if (child == null) return null;
+			startNode = child;
 		}
-
-		return current;
+		return startNode;
 	}
 
 	public String getAbsolutePath(Node node) {
@@ -129,34 +130,34 @@ public class VirtualFileSystem {
 	 * and the extension to 3 at the last dot.
 	 */
 	public static String toShortName(String raw) {
-	    if (raw == null || raw.isEmpty()) return "";
+		if (raw == null || raw.isEmpty()) return "";
 
-	    // Take only the last path component.
-	    String s = raw.replace('\\', '/');
-	    int slash = s.lastIndexOf('/');
-	    if (slash >= 0) s = s.substring(slash + 1);
+		// Take only the last path component.
+		String s = raw.replace('\\', '/');
+		int slash = s.lastIndexOf('/');
+		if (slash >= 0) s = s.substring(slash + 1);
 
-	    s = s.toUpperCase(Locale.ROOT);
+		s = s.toUpperCase(Locale.ROOT);
 
-	    String base, ext = "";
-	    int dot = s.lastIndexOf('.');
-	    if (dot >= 0) {
-	        base = s.substring(0, dot);
-	        ext  = s.substring(dot + 1);
-	    } else {
-	        base = s;
-	    }
+		String base, ext = "";
+		int dot = s.lastIndexOf('.');
+		if (dot >= 0) {
+			base = s.substring(0, dot);
+			ext  = s.substring(dot + 1);
+		} else {
+			base = s;
+		}
 
-	    // Strip characters MS-DOS doesn't allow in filenames.
-	    // Allowed: A-Z 0-9 ! # $ % & ' ( ) - @ ^ _ ` { } ~
-	    base = base.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
-	    ext  = ext.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
+		// Strip characters MS-DOS doesn't allow in filenames.
+		// Allowed: A-Z 0-9 ! # $ % & ' ( ) - @ ^ _ ` { } ~
+		base = base.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
+		ext  = ext.replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "");
 
-	    if (base.length() > 8) base = base.substring(0, 8);
-	    if (ext.length()  > 3) ext  = ext.substring(0, 3);
+		if (base.length() > 8) base = base.substring(0, 8);
+		if (ext.length()  > 3) ext	= ext.substring(0, 3);
 
-	    if (base.isEmpty() && ext.isEmpty()) return "";
-	    return ext.isEmpty() ? base : base + "." + ext;
+		if (base.isEmpty() && ext.isEmpty()) return "";
+		return ext.isEmpty() ? base : base + "." + ext;
 	}
 
 	public static class Node {
@@ -170,7 +171,7 @@ public class VirtualFileSystem {
 		public long modifiedTime = System.currentTimeMillis();
 
 		public Node(String name, boolean isDirectory) {
-			this.name = (name == null) ? "" : name.toUpperCase(Locale.ROOT);
+			this.name = (name == null) ? "" : name;
 			this.isDirectory = isDirectory;
 			this.content = "";
 		}
@@ -186,7 +187,7 @@ public class VirtualFileSystem {
 			tag.putBoolean("IsDir", isDirectory);
 			tag.putString("Content", content);
 			tag.putLong("Created",	createdTime);
-		tag.putLong("Modified", modifiedTime);
+			tag.putLong("Modified", modifiedTime);
 
 			ListTag childrenList = new ListTag();
 			for (Node child : children.values()) {
