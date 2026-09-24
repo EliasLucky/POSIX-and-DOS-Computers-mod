@@ -84,24 +84,22 @@ public class VirtualFileSystem {
 	}
 
 	public String getAbsolutePath(Node node) {
-		return getAbsolutePath(node, currentPath.startsWith("C:") || currentPath.contains("\\"));
-	}
+	    String sep    = policy.pathSeparator();
+	    String prefix = policy.rootPrefix();
 
-	public String getAbsolutePath(Node node, boolean isDos) {
-		if (node == root || node == null) return isDos ? "C:\\" : "/";
+	    if (node == null || node == root) {
+	        // Root: DOS "C:\", POSIX "/"
+	        return prefix.isEmpty() ? sep : prefix + sep;
+	    }
 
-		StringBuilder sb = new StringBuilder();
-		Node curr = node;
-		while (curr != null && curr != root) {
-			String separator = isDos ? "\\" : "/";
-			sb.insert(0, separator + curr.name);
-			curr = curr.parent;
-		}
+	    StringBuilder sb = new StringBuilder();
+	    Node curr = node;
+	    while (curr != null && curr != root) {
+	        sb.insert(0, sep + curr.name);
+	        curr = curr.parent;
+	    }
 
-		if (isDos) {
-			return "C:" + sb.toString();
-		}
-		return sb.length() == 0 ? "/" : sb.toString();
+	    return prefix.isEmpty() ? sb.toString() : prefix + sb.toString();
 	}
 
 	public CompoundTag serializeNBT() {

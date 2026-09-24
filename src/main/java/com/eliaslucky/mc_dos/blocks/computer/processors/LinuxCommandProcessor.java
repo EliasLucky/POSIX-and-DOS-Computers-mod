@@ -46,7 +46,7 @@ public class LinuxCommandProcessor implements ICommandProcessor {
 				}
 				VirtualFileSystem.Node targetCd = vfs.resolvePath(arg);
 				if (targetCd != null && targetCd.isDirectory) {
-					vfs.setCurrentPath(vfs.getAbsolutePath(targetCd, false));
+					vfs.setCurrentPath(vfs.getAbsolutePath(targetCd));//f
 				} else {
 					return "bash: cd: " + arg + ": No such file or directory";
 				}

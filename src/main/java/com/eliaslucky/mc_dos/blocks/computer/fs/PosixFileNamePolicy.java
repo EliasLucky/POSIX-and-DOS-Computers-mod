@@ -23,4 +23,6 @@ public final class PosixFileNamePolicy implements FileNamePolicy {
 
 	@Override public boolean caseSensitive() { return true; }
 	@Override public String describe() { return "POSIX case-sensitive"; }
+	@Override public String pathSeparator() { return "/"; }
+	@Override public String rootPrefix()	{ return ""; }
 }

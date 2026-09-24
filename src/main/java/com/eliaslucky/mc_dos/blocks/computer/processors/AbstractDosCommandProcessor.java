@@ -96,9 +96,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 			return "Invalid directory";
 		}
 
-		String displayPath = vfs.getAbsolutePath(targetDirNode)
-				.replace("/", "\\")
-				.replaceAll("\\\\+", "\\\\");
+		String displayPath = vfs.getAbsolutePath(targetDirNode);
 
 		StringBuilder out = new StringBuilder()
 			.append("\n Volume in drive C has no label\n")

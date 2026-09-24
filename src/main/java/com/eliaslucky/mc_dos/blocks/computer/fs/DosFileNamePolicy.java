@@ -49,4 +49,6 @@ public final class DosFileNamePolicy implements FileNamePolicy {
 
 	@Override public boolean caseSensitive() { return false; }
 	@Override public String describe() { return "MS-DOS 8.3 uppercase"; }
+	@Override public String pathSeparator() { return "\\"; }
+	@Override public String rootPrefix()	{ return "C:"; }
 }

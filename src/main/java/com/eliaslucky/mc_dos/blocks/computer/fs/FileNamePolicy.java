@@ -27,4 +27,10 @@ public interface FileNamePolicy {
 
 	/** Short description — used by HELP and diagnostics. */
 	String describe();
+	
+	/** Separator between path components: "\\" for DOS, "/" for POSIX. */
+	String pathSeparator();
+
+	/** Prefix before the first separator. "C:" for DOS, "" for POSIX. */
+	String rootPrefix();
 }
