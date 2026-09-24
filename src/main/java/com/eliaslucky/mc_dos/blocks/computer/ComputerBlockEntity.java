@@ -1,13 +1,17 @@
 package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 import com.eliaslucky.mc_dos.AllBlockEntities;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
-import com.eliaslucky.mc_dos.blocks.computer.processors.AbstractDosCommandProcessor;
+import com.eliaslucky.mc_dos.api.hardware.PeripheralBus;
+import com.eliaslucky.mc_dos.api.shell.Pipeline;
+import com.eliaslucky.mc_dos.api.shell.PipelineExecutor;
+import com.eliaslucky.mc_dos.api.shell.ShellDialect;
+import com.eliaslucky.mc_dos.api.shell.StreamResolver;
+import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
 
@@ -103,7 +107,7 @@ public class ComputerBlockEntity extends BlockEntity {
 
 	        if (!isDir) {
 	            // 1. Executables come from the registry, with the MZ header.
-	            ExecutableRegistry.Entry exe = ExecutableRegistry.get(fileName);
+	        	ExecutableRegistry.Entry exe = ExecutableRegistry.get(proc.osFamily(), fileName);
 	            if (exe != null) {
 	                node.content = exe.templateContent();
 	            } else {
@@ -133,15 +137,15 @@ public class ComputerBlockEntity extends BlockEntity {
 }
 	
 	public String executeLine(String rawLine) {
-	    ShellDialect dialect = computerType.commandProcessor.shellDialect(kernel);
+	    ICommandProcessor proc = computerType.commandProcessor;
+	    ShellDialect dialect = proc.shellDialect(kernel);
 	    if (dialect == null) {
-	        // No dialect — fall back to direct processing, no pipes.
-	        return computerType.commandProcessor.process(this, rawLine);
+	        return proc.process(this, rawLine);
 	    }
 	    Pipeline pipeline = dialect.parse(rawLine);
 	    if (pipeline.isEmpty()) return "";
 
-	    StreamResolver resolver = new DosStreamResolver();   // override per OS later
+	    StreamResolver resolver = proc.createStreamResolver();
 	    return new PipelineExecutor(resolver).execute(pipeline, this);
 	}
 

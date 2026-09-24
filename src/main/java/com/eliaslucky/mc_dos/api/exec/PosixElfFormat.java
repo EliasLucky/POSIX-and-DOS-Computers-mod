@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.api.exec;
+
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+
 /** POSIX ELF binary — matched by magic, but never actually run by us. */
 public final class PosixElfFormat implements ExecutableFormat {
     public static final PosixElfFormat INSTANCE = new PosixElfFormat();

@@ -1,9 +1,15 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.api.hardware.DeviceHandler;
+import com.eliaslucky.mc_dos.api.hardware.DeviceLookup;
+import com.eliaslucky.mc_dos.api.hardware.Kernel;
+import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
+import com.eliaslucky.mc_dos.blocks.computer.shell.dos.DosShellDialect;
 
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -18,6 +24,13 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 	// Command names this version adds on top of the shared set.
 	protected String handleVersionSpecific(ComputerBlockEntity computer, VirtualFileSystem vfs, String cmd, String arg, String rawArg) {
 		return null; // default: nothing extra
+	}
+	
+	@Override public String osFamily() { return "dos"; }
+
+	@Override
+	public ShellDialect shellDialect(Kernel kernel) {
+	    return new DosShellDialect(kernel);
 	}
 
 	// Template contents for a brand new file created by an editor.
@@ -74,7 +87,10 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 			case "TREE": return doTree(vfs);
 			case "CLS": return "__CLEAR__"; // client
 			case "EXIT": return doExit();
-			// ... the rest of the shared switch ...
+			
+			case "FIND": return doFind(pendingStdin, arg);
+			case "SORT": return doSort(pendingStdin, arg);
+			case "MORE": return doMore(pendingStdin, arg);
 		}
 		
 		// 
@@ -398,6 +414,34 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		}
 		return "";
 	}
+	
+	protected String doFind(String stdin, String arg) {
+	    if (arg.isEmpty()) return "FIND: Parameter format not correct";
+	    String needle = arg.replace("\"", "");
+	    StringBuilder out = new StringBuilder();
+	    int n = 0;
+	    for (String line : stdin.split("\n", -1)) {
+	        n++;
+	        if (line.contains(needle)) {
+	            out.append("---------- ").append(n).append(": ").append(line).append('\n');
+	        }
+	    }
+	    if (out.length() == 0) {
+	        return "---------- " + needle.toUpperCase(Locale.ROOT) + ": Line match not found.";
+	    }
+	    return out.toString();
+	}
+
+	protected String doSort(String stdin, String arg) {
+	    String[] lines = stdin.split("\n", -1);
+	    java.util.Arrays.sort(lines);
+	    return String.join("\n", lines);
+	}
+
+	protected String doMore(String stdin, String arg) {
+	    // Pagination not yet implemented — pass through.
+	    return stdin;
+	}
 
 	// Executable resolution
 
@@ -405,37 +449,45 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 	 * Search PATH for NAME.EXE / NAME.COM / NAME.BAT and launch the registered
 	 * Java handler. Returns an output string, or null if nothing matched.
 	 */
-	protected String tryLaunchExecutable(ComputerBlockEntity computer,
-										 VirtualFileSystem vfs,
-										 String name, String args) {
+	protected String tryLaunchExecutable(ComputerBlockEntity computer, VirtualFileSystem vfs, String name, String args) {
 		var env = computer.getEnvironment();
 		String path = env.getOrDefault("PATH", defaultPath());
-
+		
 		for (String dir : path.split(";")) {
 			if (dir.isEmpty()) continue;
 			VirtualFileSystem.Node dirNode = vfs.resolvePath(dir);
 			if (dirNode == null || !dirNode.isDirectory) continue;
-
-			for (String ext : new String[]{ ".EXE", ".COM", ".BAT" }) {
-				VirtualFileSystem.Node file = dirNode.children.get(name + ext);
+			
+			for (String ext : new String[]{ "", ".EXE", ".COM", ".BAT" }) {
+				String candidate = (name + ext).toUpperCase(Locale.ROOT);
+				VirtualFileSystem.Node file = dirNode.children.get(candidate);
 				if (file == null || file.isDirectory) continue;
-
-				ExecutableRegistry.Entry entry = ExecutableRegistry.get(name + ext);
+				
+				ExecutableRegistry.Entry entry = ExecutableRegistry.get(osFamily(), candidate);
 				if (entry == null) continue;
-
-				// Validate the file header — a corrupted executable must not run.
-				if (!entry.matchesHeader(file.content)) {
-					return "Bad " + ext.substring(1) + " header";
+				
+				if (!entry.format().matches(candidate, file)) {
+					return "Bad " + entry.format().name() + " header";
 				}
-
-				String output = entry.run(computer, args, file);
-				if (output != null && output.startsWith("APP_LAUNCH:")) {
-					return output;
-				}
+			
+				String output = entry.runner().run(computer, args, file);
 				return output == null ? "" : output;
 			}
 		}
 		return null;
+	}
+	
+	private String pendingStdin = "";
+
+	@Override
+	public String processWithStdin(ComputerBlockEntity computer,
+	                               String rawInput, String stdin) {
+	    this.pendingStdin = stdin == null ? "" : stdin;
+	    try {
+	        return process(computer, rawInput);
+	    } finally {
+	        this.pendingStdin = "";
+	    }
 	}
 
 	protected abstract String helpFor(String cmd);

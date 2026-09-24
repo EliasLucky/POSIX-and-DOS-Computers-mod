@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.api.exec;
+
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+
 /** POSIX shebang — file starts with "#!"; interpreter follows. */
 public final class PosixShebangFormat implements ExecutableFormat {
     public static final PosixShebangFormat INSTANCE = new PosixShebangFormat();

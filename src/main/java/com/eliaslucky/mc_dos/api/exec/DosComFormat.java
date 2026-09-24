@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.api.exec;
+
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+
 /** MS-DOS .COM — raw binary, no magic. Matched by extension only. */
 public final class DosComFormat implements ExecutableFormat {
     public static final DosComFormat INSTANCE = new DosComFormat();

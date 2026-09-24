@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.api.exec;
+
+import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+
 /** MS-DOS .BAT — text file of shell commands. */
 public final class DosBatFormat implements ExecutableFormat {
     public static final DosBatFormat INSTANCE = new DosBatFormat();

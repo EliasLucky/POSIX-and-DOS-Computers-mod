@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors.exec;
 
+import com.eliaslucky.mc_dos.api.exec.ExecutableFormat;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 

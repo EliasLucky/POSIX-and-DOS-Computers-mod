@@ -2,8 +2,10 @@ package com.eliaslucky.mc_dos.blocks.computer.processors;
 
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
+import com.eliaslucky.mc_dos.api.shell.StreamResolver;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.shell.dos.DosStreamResolver;
 
 public interface ICommandProcessor {
 	String process(ComputerBlockEntity computer, String rawInput);
@@ -28,9 +30,17 @@ public interface ICommandProcessor {
      */
     default Kernel createKernel() { return null; }
     default ShellDialect shellDialect(Kernel kernel) { return null; }
+    /** OS family key — "dos", "unix", "posix". Used to bucket executables. */
+    default String osFamily() { return "dos"; }
+
+    /** Resolver for redirects and pipe carry-over. */
+    default StreamResolver createStreamResolver() {
+        return DosStreamResolver.INSTANCE;
+    }
     /**
-     * Process with stdin available. The default forwards to `process`,
-     * ignoring stdin — correct for shells that don't yet support pipes.
+     * Same as process(), but with stdin provided. Commands that read
+     * from stdin (find, sort, more, grep) consume it; everything else
+     * ignores it. The default just calls process().
      */
     default String processWithStdin(ComputerBlockEntity computer, String rawInput, String stdin) {
         return process(computer, rawInput);   // default: ignore stdin

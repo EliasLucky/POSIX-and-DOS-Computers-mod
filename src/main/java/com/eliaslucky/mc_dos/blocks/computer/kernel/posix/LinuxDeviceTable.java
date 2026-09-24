@@ -1,4 +1,12 @@
-public class LinuxDevTable {
+package com.eliaslucky.mc_dos.blocks.computer.kernel.posix;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.eliaslucky.mc_dos.api.hardware.DeviceHandler;
+
+public class LinuxDeviceTable {
     /** Linux device names are Unix filenames. Driver registers a base name;
      *  the kernel appends a per-class index (lp0, lp1, mccmd0, ...). */
     private final Map<String, DeviceHandler> devices = new LinkedHashMap<>();

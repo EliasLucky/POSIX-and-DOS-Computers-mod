@@ -1,4 +1,4 @@
-package com.eliaslucky.mc_dos.blocks.computer.shell.dos;
+package com.eliaslucky.mc_dos.blocks.computer.shell.posix;
 
 import com.eliaslucky.mc_dos.api.hardware.DeviceHandler;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
@@ -9,8 +9,9 @@ import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 
 import java.nio.charset.StandardCharsets;
 
-public class DosStreamResolver implements StreamResolver {
-    public static final DosStreamResolver INSTANCE = new DosStreamResolver();
+public class PosixStreamResolver implements StreamResolver {
+
+    public static final PosixStreamResolver INSTANCE = new PosixStreamResolver();
 
     private static final int MAX_READ = 1 << 20;
 
@@ -63,7 +64,7 @@ public class DosStreamResolver implements StreamResolver {
             switch (file.mode()) {
                 case WRITE  -> node.content = text;
                 case APPEND -> node.content = node.content + text;
-                case READ   -> { /* not valid on a sink */ }
+                case READ   -> { }
             }
             node.modifiedTime = System.currentTimeMillis();
             computer.setChanged();
