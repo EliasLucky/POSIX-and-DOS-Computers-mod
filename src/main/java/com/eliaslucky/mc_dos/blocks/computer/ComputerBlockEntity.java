@@ -62,7 +62,7 @@ public class ComputerBlockEntity extends BlockEntity {
 
 	        VirtualFileSystem.Node dir = vfs.getRoot();
 	        for (int i = 0; i < segments.length - 1; i++) {
-	            String segName = segments[i].toUpperCase(Locale.ROOT);
+	            String segName = vfs.canonicalize(segments[i]);
 	            VirtualFileSystem.Node existing = dir.children.get(segName);
 	            if (existing == null) {
 	                existing = new VirtualFileSystem.Node(segName, true);
@@ -71,7 +71,7 @@ public class ComputerBlockEntity extends BlockEntity {
 	            dir = existing;
 	        }
 
-	        String fileName = segments[segments.length - 1].toUpperCase(Locale.ROOT);
+	        String fileName = vfs.canonicalize(segments[segments.length - 1]);
 	        if (dir.children.containsKey(fileName)) continue;
 
 	        VirtualFileSystem.Node node = new VirtualFileSystem.Node(fileName, isDir);
