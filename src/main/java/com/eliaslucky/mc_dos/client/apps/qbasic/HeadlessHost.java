@@ -14,6 +14,9 @@ public class HeadlessHost implements Host {
     
     private int lastErrorCode = -1;
     private String lastErrorMessage = null;
+    
+    private int fg = 15;
+    private int bg = 0;
 
     public List<String> getOutput() { return lines; }
     public boolean hadError() { return lastErrorCode >= 0; }
@@ -38,7 +41,11 @@ public class HeadlessHost implements Host {
     @Override public void drawLine(int x1, int y1, int x2, int y2, int c, int s) { /* no-op */ }
     @Override public void circle(int cx, int cy, int r, int c, boolean filled)   { /* no-op */ }
     @Override public void locate(int row, int col)         { /* no-op */ }
-    @Override public void color(int fg, int bg)            { /* no-op */ }
+    @Override public void color(int f, int b) {
+        this.fg = f & 0xFF;
+        this.bg = b & 0xFF;
+    }
+    @Override public int colorFg() { return fg; }
     @Override public void beep()                           { /* no-op */ }
     @Override public void sleep(int ms)                    { /* no-op */ }
 

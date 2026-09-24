@@ -57,6 +57,9 @@ public class Parser {
         if (t.isKeyword("COLOR"))  { advance(); return parseColor(line); }
         if (t.isKeyword("SCREEN")) { advance(); return parseScreen(line); }
         if (t.isKeyword("PSET"))   { advance(); return parsePset(line); }
+        if (t.isKeyword("LINE"))   { advance(); return parseLine(line); }
+        if (t.isKeyword("CIRCLE")) { advance(); return parseCircle(line); }
+        if (t.isKeyword("RANDOMIZE")) { advance(); return parseRandomize(line); }
 
         if (t.is(Token.TokenType.IDENT)) return parseAssign(line);
 
@@ -316,7 +319,26 @@ public class Parser {
             advance(); return new StringLiteral(t.text());
         }
         if (t.is(Token.TokenType.IDENT)) {
-            advance(); return new VariableRef(t.text());
+        	String name = t.text();
+            advance();
+
+            // Function call:  NAME ( arg, arg, ... )
+            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals("(")) {
+                advance();
+                List<Expression> args = new ArrayList<>();
+                if (!(peek().is(Token.TokenType.PUNCT) && peek().text().equals(")"))) {
+                    args.add(parseExpr());
+                    while (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
+                        advance();
+                        args.add(parseExpr());
+                    }
+                }
+                expectPunct(")");
+                return new FunctionCall(name, args);
+            }
+
+            // Otherwise, a plain variable reference.
+            return new VariableRef(name);
         }
         if (t.is(Token.TokenType.PUNCT) && t.text().equals("(")) {
             advance();
@@ -327,6 +349,70 @@ public class Parser {
         
         advance();
         return new NumberLiteral(0);
+    }
+    
+    private Statement parseLine(int line) {
+        // LINE (x1,y1)-(x2,y2) [, color [, B | BF]]
+        if (!(peek().is(Token.TokenType.PUNCT) && peek().text().equals("("))) {
+            throw new QBasicRuntimeException(1, line, "LINE requires coordinates");
+        }
+        advance();
+        Expression x1 = parseExpr();
+        expectPunct(",");
+        Expression y1 = parseExpr();
+        expectPunct(")");
+
+        expectOp("-");
+        expectPunct("(");
+        Expression x2 = parseExpr();
+        expectPunct(",");
+        Expression y2 = parseExpr();
+        expectPunct(")");
+
+        Expression color = null;
+        boolean box = false, filled = false;
+
+        if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
+            advance();
+            color = parseExpr();
+
+            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
+                advance();
+                // B or BF — comes as an IDENT
+                if (peek().is(Token.TokenType.IDENT)) {
+                    String mode = peek().text().toUpperCase();
+                    advance();
+                    if (mode.equals("B"))       { box = true; }
+                    else if (mode.equals("BF")) { box = true; filled = true; }
+                }
+            }
+        }
+        return new LineStmt(line, x1, y1, x2, y2, color, box, filled);
+    }
+
+    private Statement parseCircle(int line) {
+        expectPunct("(");
+        Expression x = parseExpr();
+        expectPunct(",");
+        Expression y = parseExpr();
+        expectPunct(")");
+        expectPunct(",");
+        Expression r = parseExpr();
+
+        Expression color = null;
+        if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
+            advance();
+            color = parseExpr();
+            // Ignore start/end/aspect args for now.
+        }
+        return new CircleStmt(line, x, y, r, color);
+    }
+
+    private Statement parseRandomize(int line) {
+        // RANDOMIZE [expr]
+        Expression seed = null;
+        if (!atEndOfStatement()) seed = parseExpr();
+        return new RandomizeStmt(line, seed);
     }
 
     // Token

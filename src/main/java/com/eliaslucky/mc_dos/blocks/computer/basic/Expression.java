@@ -1,5 +1,7 @@
 package com.eliaslucky.mc_dos.blocks.computer.basic;
 
+import java.util.List;
+
 public interface Expression {
     Value eval(ExecutionContext ctx, Host host);
 }
@@ -75,5 +77,14 @@ record BinaryOp(String op, Expression left, Expression right) implements Express
             case ">=" -> cmp >= 0 ? -1 : 0;
             default   -> 0;
         };
+    }
+}
+
+record FunctionCall(String name, List<Expression> args) implements Expression {
+    @Override
+    public Value eval(ExecutionContext ctx, Host host) {
+        List<Value> vals = new java.util.ArrayList<>(args.size());
+        for (Expression e : args) vals.add(e.eval(ctx, host));
+        return BuiltinFunctions.call(name, vals);
     }
 }

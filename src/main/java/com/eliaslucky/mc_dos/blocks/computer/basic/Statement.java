@@ -214,3 +214,57 @@ record PsetStmt(int line, Expression x, Expression y, Expression color) implemen
                   (int) y.eval(ctx, host).asNumber(), c);
     }
 }
+
+// LINE (x1,y1)-(x2,y2) [, color [, B | BF]]
+record LineStmt(int line, Expression x1, Expression y1, Expression x2, Expression y2, Expression color,  boolean box, boolean filledBox) implements Statement {
+ @Override public int line() { return line; }
+
+ @Override
+ public void execute(ExecutionContext ctx, Host host) {
+     int ax = (int) x1.eval(ctx, host).asNumber();
+     int ay = (int) y1.eval(ctx, host).asNumber();
+     int bx = (int) x2.eval(ctx, host).asNumber();
+     int by = (int) y2.eval(ctx, host).asNumber();
+     int c  = color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
+
+     if (box) {
+         host.drawLine(ax, ay, bx, ay, c, 0);
+         host.drawLine(bx, ay, bx, by, c, 0);
+         host.drawLine(bx, by, ax, by, c, 0);
+         host.drawLine(ax, by, ax, ay, c, 0);
+         if (filledBox) {
+             int y0 = Math.min(ay, by);
+             int y1 = Math.max(ay, by);
+             int xl = Math.min(ax, bx);
+             int xr = Math.max(ax, bx);
+             for (int y = y0; y <= y1; y++) host.drawLine(xl, y, xr, y, c, 0);
+         }
+     } else {
+         host.drawLine(ax, ay, bx, by, c, 0);
+     }
+ }
+}
+
+// CIRCLE (x,y), radius [, color]
+record CircleStmt(int line, Expression x, Expression y, Expression radius, Expression color) implements Statement {
+ @Override public int line() { return line; }
+
+ @Override
+ public void execute(ExecutionContext ctx, Host host) {
+     int cx = (int) x.eval(ctx, host).asNumber();
+     int cy = (int) y.eval(ctx, host).asNumber();
+     int r  = (int) radius.eval(ctx, host).asNumber();
+     int c  = color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
+     host.circle(cx, cy, r, c, false);
+ }
+}
+
+record RandomizeStmt(int line, Expression seed) implements Statement {
+    @Override public int line() { return line; }
+    @Override
+    public void execute(ExecutionContext ctx, Host host) {
+        long s = seed == null ? System.nanoTime()
+                              : (long) seed.eval(ctx, host).asNumber();
+        BuiltinFunctions.seed(s);
+    }
+}
