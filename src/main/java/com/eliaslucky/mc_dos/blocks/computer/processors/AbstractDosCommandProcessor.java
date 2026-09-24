@@ -76,6 +76,27 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 			case "EXIT": return doExit();
 			// ... the rest of the shared switch ...
 		}
+		
+		// 
+		Kernel k = computer.getKernel();
+		if (k != null) {
+		    DeviceLookup devices = k.getDevices();
+		    if (devices.isDevice(cmd)) {
+		        DeviceHandler h = devices.lookup(cmd);
+
+		        // Send the args to the device as a newline-terminated line.
+		        if (!argRaw.isEmpty()) {
+		            h.onWrite((argRaw + "\n").getBytes(StandardCharsets.UTF_8));
+		        }
+
+		        // Drain whatever the device has ready to return.
+		        if (h.hasData()) {
+		            byte[] data = h.onRead(65536);
+		            return new String(data, StandardCharsets.UTF_8).stripTrailing();
+		        }
+		        return "";   // nothing to display yet — will arrive on next call
+		    }
+		}
 
 		// Version error wording.
 		String fallback = fallbackUnknown(computer, cmd);

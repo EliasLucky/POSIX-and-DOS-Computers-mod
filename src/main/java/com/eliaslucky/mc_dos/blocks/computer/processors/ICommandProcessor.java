@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
 
@@ -19,4 +20,10 @@ public interface ICommandProcessor {
 	 * for every file in ComputerType.defaultFiles that isn't an executable.
 	 */
 	default String defaultFileContent(String fileName) { return null; }
+	
+	/**
+     * Create this OS's kernel. Called by the block entity on power-on.
+     * Return null for a minimal shell with no kernel (e.g. a ROM BASIC).
+     */
+    default Kernel createKernel() { return null; }
 }

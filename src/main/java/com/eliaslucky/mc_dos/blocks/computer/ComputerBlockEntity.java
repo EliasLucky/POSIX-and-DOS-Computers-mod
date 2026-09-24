@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.eliaslucky.mc_dos.AllBlockEntities;
+import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.blocks.computer.processors.AbstractDosCommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
@@ -23,6 +24,7 @@ public class ComputerBlockEntity extends BlockEntity {
 	private boolean initializedDefaults = false;
 
 	private final Map<String, String> environment = new HashMap<>();
+	private Kernel kernel;
 
 	public ComputerBlockEntity(BlockPos pos, BlockState state) {
 		super(AllBlockEntities.COMPUTER_PROGRAMMABLE_BLOCK.get(), pos, state);
@@ -42,10 +44,33 @@ public class ComputerBlockEntity extends BlockEntity {
 		if (!initializedDefaults) {
 			setupDefaultFiles();
 			setupEnvironment();
-			initializedDefaults = true;
-			setChanged();		
+			initializedDefaults = true;	
 		}
+		if (!level.isClientSide()) {
+		    bootKernel();
+		}
+		setChanged();
 	}
+	
+	private void bootKernel() {
+	    if (kernel != null) {
+	        kernel.shutdown();
+	        kernel = null;
+	    }
+	    Kernel newKernel = computerType.commandProcessor.createKernel();
+	    if (newKernel == null) return;
+
+	    PeripheralBus bus = new AdjacentBlocksBus(level, worldPosition);
+	    newKernel.boot(bus, fileSystem);
+	    this.kernel = newKernel;
+
+	    for (String line : newKernel.getBootLog()) {
+	        // Route to terminal output if you want them visible
+	        // (the terminal screen reads from getBootLog on open)
+	    }
+	}
+	
+	public Kernel getKernel() { return kernel; }
 
 	public Map<String, String> getEnvironment() { return environment; }
 	
