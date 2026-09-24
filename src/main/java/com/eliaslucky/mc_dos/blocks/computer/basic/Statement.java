@@ -301,3 +301,53 @@ record RandomizeStmt(int line, Expression seed) implements Statement {
         BuiltinFunctions.seed(s);
     }
 }
+
+// DO ... LOOP
+record DoStmt(int line, Expression topCondition, boolean topUntil, boolean checkAtTop, JumpTarget exit) implements Statement {
+ @Override public int line() { return line; }
+
+ @Override
+ public void execute(ExecutionContext ctx, Host host) {
+     if (!checkAtTop) return;   // plain DO: just fall through
+     boolean cond = topCondition.eval(ctx, host).asNumber() != 0;
+     boolean shouldExit = topUntil ? cond : !cond;
+     if (shouldExit) ctx.jumpTo(exit.pc);
+ }
+}
+
+record LoopStmt(int line, Expression bottomCondition, boolean bottomUntil, boolean checkAtTop, JumpTarget bodyStart) implements Statement {
+ @Override public int line() { return line; }
+
+ @Override
+ public void execute(ExecutionContext ctx, Host host) {
+     if (checkAtTop) {
+         // DO WHILE / DO UNTIL: unconditional jump back; the top
+         // statement re-evaluates and exits if needed.
+         ctx.jumpTo(bodyStart.pc);
+         return;
+     }
+     // LOOP WHILE / LOOP UNTIL — or bare LOOP (bottomCondition == null
+     // which means "always continue").
+     if (bottomCondition == null) {
+         ctx.jumpTo(bodyStart.pc);
+         return;
+     }
+     boolean cond = bottomCondition.eval(ctx, host).asNumber() != 0;
+     boolean shouldContinue = bottomUntil ? !cond : cond;
+     if (shouldContinue) ctx.jumpTo(bodyStart.pc);
+ }
+}
+
+record ExitDoStmt(int line, JumpTarget target) implements Statement {
+ @Override public int line() { return line; }
+ @Override
+ public void execute(ExecutionContext ctx, Host host) {
+     if (target.pc < 0) {
+         // Should never happen — parser filled it in at LOOP.
+         host.runtimeError(1, "EXIT DO with unresolved target", line);
+         ctx.stop();
+         return;
+     }
+     ctx.jumpTo(target.pc);
+ }
+}

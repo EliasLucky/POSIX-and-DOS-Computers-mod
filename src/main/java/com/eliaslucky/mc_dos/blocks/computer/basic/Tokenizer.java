@@ -9,7 +9,7 @@ public class Tokenizer {
             "CLS", "REM", "INPUT", "SCREEN", "COLOR", "LOCATE",
             "PSET", "LINE", "CIRCLE", "STOP", "DATA", "READ",
             "AND", "OR", "NOT", "MOD", "DIM", "AS", "SLEEP", "BEEP",
-            "TRUE", "FALSE", "RANDOMIZE"
+            "TRUE", "FALSE", "RANDOMIZE", "DO", "LOOP", "WHILE", "UNTIL", "EXIT"
     );
 
     private final String src;

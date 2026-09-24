@@ -58,7 +58,7 @@ public class QBasicApplication extends AbstractEditorApplication {
             return;
         }
     	if (mode == Mode.RUNNING) {
-    	    if (runState == RunState.RUNNING) {
+    	    if (runState != RunState.WAITING_INPUT) {
     	        runState = interpreter.tick(QBasicInterpreter.STEPS_PER_TICK);
     	    }
     	    if (runState == RunState.FINISHED) {

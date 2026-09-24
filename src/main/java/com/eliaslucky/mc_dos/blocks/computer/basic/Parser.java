@@ -1,11 +1,14 @@
 package com.eliaslucky.mc_dos.blocks.computer.basic;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 public class Parser {
     private final List<Token> toks;
     private int pos = 0;
+    private final Deque<DoStmt> doStack = new ArrayDeque<>();
 
     public Parser(List<Token> tokens) { this.toks = tokens; }
 
@@ -23,18 +26,51 @@ public class Parser {
                 advance();
             }
 
-            // Multiple statements on one line separated by ':'
-            while (!peek().is(Token.TokenType.NEWLINE) && !peek().is(Token.TokenType.EOF)) {
-                Statement s = parseStatement(lineNo);
-                if (s != null) out.add(s);
-                if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) {
-                    advance(); continue;
-                }
-                break;
-            }
+            parseOneLine(lineNo, out);
             autoLine = lineNo + 1;
         }
         return out;
+    }
+    
+    /**
+     * Parse all statements on one logical line, adding them to `out`.
+     * If the line begins with DO, the whole DO ... LOOP is consumed
+     * here and appended to `out` as flat statements.
+     */
+    private void parseOneLine(int lineNo, List<Statement> out) {
+        while (!peek().is(Token.TokenType.NEWLINE) && !peek().is(Token.TokenType.EOF)) {
+
+            if (peek().isKeyword("DO")) {
+                parseBlockDo(lineNo, out);
+                return;    // parseBlockDo consumes through LOOP
+            }
+
+            if (peek().isKeyword("EXIT")) {
+                advance();
+                if (peek().isKeyword("DO")) {
+                    advance();
+                    if (doStack.isEmpty()) {
+                        throw new QBasicRuntimeException(1, lineNo, "EXIT DO without DO");
+                    }
+                    out.add(new ExitDoStmt(lineNo, doStack.peek().exit()));
+                    continue;
+                }
+                // EXIT FOR (later), EXIT SUB, etc.
+                throw new QBasicRuntimeException(1, lineNo, "EXIT used with unknown target");
+            }
+
+            Statement s = parseStatement(lineNo);
+            if (s != null) out.add(s);
+
+            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(":")) {
+                advance();
+                continue;
+            }
+            break;
+        }
+        // Consume trailing tokens we didn't understand.
+        while (!peek().is(Token.TokenType.NEWLINE) && !peek().is(Token.TokenType.EOF)) advance();
+        if (peek().is(Token.TokenType.NEWLINE)) advance();
     }
 
     private Statement parseStatement(int line) {
@@ -455,6 +491,69 @@ public class Parser {
         Expression seed = null;
         if (!atEndOfStatement()) seed = parseExpr();
         return new RandomizeStmt(line, seed);
+    }
+    
+    /**
+     * Parse DO [WHILE|UNTIL expr] ... LOOP [WHILE|UNTIL expr]
+     * Appends DoStmt, body, LoopStmt to `out` as flat statements.
+     */
+    private void parseBlockDo(int lineNo, List<Statement> out) {
+        advance();   // consume DO
+
+        Expression topCondition = null;
+        boolean topUntil = false;
+        boolean checkAtTop = false;
+
+        if (peek().isKeyword("WHILE")) { advance(); topCondition = parseExpr(); checkAtTop = true; }
+        else if (peek().isKeyword("UNTIL")) { advance(); topCondition = parseExpr(); checkAtTop = true; topUntil = true; }
+
+        skipLine();
+
+        JumpTarget exitTarget = new JumpTarget();
+        DoStmt doStmt = new DoStmt(lineNo, topCondition, topUntil, checkAtTop, exitTarget);
+
+        int doIndex = out.size();
+        out.add(doStmt);
+        doStack.push(doStmt);
+
+        // Body: parse until LOOP (at the same nesting level).
+        while (true) {
+            skipNewlines();
+            if (peek().is(Token.TokenType.EOF)) {
+                throw new QBasicRuntimeException(1, lineNo, "DO without LOOP");
+            }
+            if (peek().isKeyword("LOOP")) {
+                advance();
+                break;
+            }
+
+            int subLine = lineNo;
+            if (peek().is(Token.TokenType.NUMBER)) {
+                try { subLine = (int) Double.parseDouble(peek().text()); }
+                catch (Exception ignored) {}
+                advance();
+            }
+            parseOneLine(subLine, out);
+        }
+
+        // Optional LOOP WHILE / LOOP UNTIL.
+        Expression bottomCondition = null;
+        boolean bottomUntil = false;
+        if (peek().isKeyword("WHILE")) { advance(); bottomCondition = parseExpr(); }
+        else if (peek().isKeyword("UNTIL")) { advance(); bottomCondition = parseExpr(); bottomUntil = true; }
+
+        skipLine();
+
+        JumpTarget bodyStart = new JumpTarget();
+        bodyStart.pc = doIndex + 1;
+
+        LoopStmt loopStmt = new LoopStmt(lineNo, bottomCondition, bottomUntil, checkAtTop, bodyStart);
+        int loopIndex = out.size();
+        out.add(loopStmt);
+
+        exitTarget.pc = loopIndex + 1;
+
+        doStack.pop();
     }
 
     // Token
