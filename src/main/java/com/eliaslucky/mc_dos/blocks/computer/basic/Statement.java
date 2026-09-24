@@ -44,6 +44,36 @@ record PrintStmt(int line, List<Expression> exprs, List<Character> separators, b
     }
 }
 
+record InputStmt(int line, String prompt, List<String> targets) implements Statement {
+    @Override public int line() { return line; }
+
+    @Override
+    public void execute(ExecutionContext ctx, Host host) {
+        // First execution: print prompt, request input, pc stays put.
+        if (!ctx.hasInputValue()) {
+            if (!prompt.isEmpty()) host.print(prompt);
+            ctx.requestInput();
+            return;
+        }
+
+        // Resumed: consume the supplied line and assign to each target.
+        String raw = ctx.consumeInput();
+        String[] parts = raw.split(",", -1);
+
+        for (int i = 0; i < targets.size(); i++) {
+            String name = targets.get(i);
+            String val  = (i < parts.length) ? parts[i].trim() : "";
+
+            if (name.toUpperCase().endsWith("$")) {
+                ctx.setVar(name, Value.of(val));
+            } else {
+                try   { ctx.setVar(name, Value.of(Double.parseDouble(val))); }
+                catch (NumberFormatException e) { ctx.setVar(name, Value.of(0)); }
+            }
+        }
+    }
+}
+
 // Assignment  [LET] var = expr
 record AssignStmt(int line, String name, Expression value) implements Statement {
     @Override public int line() { return line; }
@@ -173,8 +203,11 @@ record SleepStmt(int line, Expression seconds) implements Statement {
     @Override public int line() { return line; }
     @Override
     public void execute(ExecutionContext ctx, Host host) {
-        int ms = (int)(seconds.eval(ctx, host).asNumber() * 1000);
-        if (ms > 0) host.sleep(ms);
+    	double secs = seconds.eval(ctx, host).asNumber();
+        if (secs > 0) {
+            int ms = (int)(secs * 1000);
+            ctx.requestSleep(System.currentTimeMillis() + ms);
+        }
     }
 }
 

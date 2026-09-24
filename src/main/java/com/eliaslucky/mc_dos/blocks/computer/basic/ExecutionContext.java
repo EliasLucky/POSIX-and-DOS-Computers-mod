@@ -50,6 +50,27 @@ public final class ExecutionContext {
     // PRINT column
     public int  getPrintColumn()      { return printColumn; }
     public void setPrintColumn(int c) { printColumn = c; }
+    
+    // INPUT
+    private boolean inputRequested = false;
+    private String  inputValue     = null;
+
+    public boolean hasInputRequest() { return inputRequested; }
+    public void    requestInput()    { inputRequested = true; }
+    public boolean hasInputValue()   { return inputValue != null; }
+    public String  consumeInput()    { String s = inputValue; inputValue = null; return s; }
+    public void    provideInput(String s) {
+        this.inputValue = s;
+        this.inputRequested = false;
+    }
+
+    // SLEEP
+    private long sleepUntilMillis = 0;
+
+    public boolean hasPendingSleep() { return sleepUntilMillis > 0; }
+    public long    getSleepUntil()   { return sleepUntilMillis; }
+    public void    requestSleep(long until) { sleepUntilMillis = until; }
+    public void    clearSleep()      { sleepUntilMillis = 0; }
 
     private static String normalize(String name) {
         String n = name.trim().toUpperCase(Locale.ROOT);

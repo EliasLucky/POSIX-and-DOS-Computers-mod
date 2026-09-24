@@ -117,4 +117,17 @@ public class QBasicHostImpl implements Host {
         printNewline();
         print("Runtime error " + code + " at line " + line + ": " + msg);
     }
+    
+    public void backspaceChar() {
+        if (!(app.getDisplayMode() instanceof TextDisplayMode t)) return;
+
+        int col = t.getCursorCol() - 1;
+        int row = t.getCursorRow();
+        if (col < 0) {
+            if (row > 0) { row--; col = t.cols - 1; }
+            else return;
+        }
+        t.writeChar(row, col, ' ', t.getForeground(), t.getBackground());
+        t.setCursor(row, col);
+    }
 }

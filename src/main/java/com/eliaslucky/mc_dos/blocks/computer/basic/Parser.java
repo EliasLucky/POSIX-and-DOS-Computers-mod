@@ -42,6 +42,7 @@ public class Parser {
 
         if (t.isKeyword("REM"))    { advance(); skipLine(); return new RemStmt(line); }
         if (t.isKeyword("PRINT"))  { advance(); return parsePrint(line); }
+        if (t.isKeyword("INPUT"))  { advance(); return parseInput(line); }
         if (t.isKeyword("LET"))    { advance(); return parseAssign(line); }
         if (t.isKeyword("IF"))     { advance(); return parseIf(line); }
         if (t.isKeyword("FOR"))    { advance(); return parseFor(line); }
@@ -88,6 +89,47 @@ public class Parser {
             break;
         }
         return new PrintStmt(line, exprs, seps, trailingSuppress);
+    }
+    
+    private Statement parseInput(int line) {
+        // Two forms:
+        //   INPUT [;] ["prompt" {;|,}] var [, var]...
+        //   INPUT promptVar; var [, var]...
+        // We support the first form and the bare form. The prompt-variable form
+        // is rare in beginner code and can be added later.
+
+        // Optional leading semicolon (suppresses the "? " auto-prompt).
+        boolean skipQuestionMark = false;
+        if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(";")) {
+            advance();
+            skipQuestionMark = true;
+        }
+
+        // Optional string-literal prompt.
+        String prompt = skipQuestionMark ? "" : "? ";
+        if (peek().is(Token.TokenType.STRING)) {
+            prompt = peek().text();
+            advance();
+            // Separator between prompt and variables: ; or ,
+            if (peek().is(Token.TokenType.PUNCT)
+                    && (peek().text().equals(";") || peek().text().equals(","))) {
+                advance();
+            }
+        }
+
+        // Comma-separated variable list.
+        List<String> targets = new ArrayList<>();
+        while (true) {
+            Token var = expect(Token.TokenType.IDENT, "variable name");
+            targets.add(var.text());
+            if (peek().is(Token.TokenType.PUNCT) && peek().text().equals(",")) {
+                advance();
+                continue;
+            }
+            break;
+        }
+
+        return new InputStmt(line, prompt, targets);
     }
 
     // Assignment

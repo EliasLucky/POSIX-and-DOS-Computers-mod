@@ -1,6 +1,7 @@
 package com.eliaslucky.mc_dos.client.apps.qbasic;
 
 import com.eliaslucky.mc_dos.blocks.computer.basic.QBasicInterpreter;
+import com.eliaslucky.mc_dos.blocks.computer.basic.RunState;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
@@ -10,11 +11,13 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 public class QBasicApplication extends AbstractEditorApplication {
-    public enum Mode  { EDITOR, MENU, DIALOG, RUN_OUTPUT }
+    public enum Mode  { EDITOR, MENU, DIALOG, RUN_OUTPUT,RUNNING }
     public enum Focus { EDIT, IMMEDIATE }
 
     private Mode  mode  = Mode.EDITOR;
     private Focus focus = Focus.EDIT;
+    private RunState runState = RunState.FINISHED;
+    private final StringBuilder inputBuffer = new StringBuilder();
 
     // Regions
     private final MenuBar       menuBar   = new MenuBar(QBasicMenus.ROOT);
@@ -54,13 +57,22 @@ public class QBasicApplication extends AbstractEditorApplication {
             screen.returnToShell();
             return;
         }
-        if (mode == Mode.RUN_OUTPUT) {
-            // Full-screen takeover: the display mode IS the output surface.
-            g.fill(0, 0, appWidth, appHeight, DosPalette.BLACK);
-            displayMode.render(g, 0, 0, appWidth, appHeight);
-            renderFooter(g);
-            return;
-        }
+    	if (mode == Mode.RUNNING) {
+    	    if (runState == RunState.RUNNING) {
+    	        runState = interpreter.tick(QBasicInterpreter.STEPS_PER_TICK);
+    	    }
+    	    if (runState == RunState.FINISHED) {
+    	        mode = Mode.RUN_OUTPUT;
+    	        // fall through to render the output normally
+    	    }
+    	    // Otherwise render the display below.
+    	}
+    	if (mode == Mode.RUNNING || mode == Mode.RUN_OUTPUT) {
+    	    g.fill(0, 0, appWidth, appHeight, DosPalette.BLACK);
+    	    displayMode.render(g, 0, 0, appWidth, appHeight);
+    	    renderFooter(g);
+    	    return;
+    	}
 
         super.render(g, mouseX, mouseY, partialTick);
         if (mode == Mode.MENU) menuBar.render(g, this, appWidth);
@@ -103,6 +115,11 @@ public class QBasicApplication extends AbstractEditorApplication {
             case EDITOR     -> (focus == Focus.IMMEDIATE)
                     ? " Enter=Execute  F6=Editor  Esc=Cancel "
                     : " F1=Help  F2=Save  F5=Run  F6=Window  F10=Menu ";
+            case RUNNING -> switch (runState) {
+	            case WAITING_INPUT -> " Type your input, ENTER to submit, ESC to abort ";
+	            case WAITING_SLEEP -> " Sleeping...  ESC to abort ";
+	            default            -> " Running...  ESC to abort ";
+	        };
         };
     }
 
@@ -114,6 +131,30 @@ public class QBasicApplication extends AbstractEditorApplication {
         consumingMenuKeystroke = false;
 
         switch (mode) {
+	        case RUNNING:
+	            // Abort at any time.
+	            if (key == GLFW.GLFW_KEY_ESCAPE) {
+	                interpreter.stop();
+	                runState = RunState.FINISHED;
+	                mode = Mode.RUN_OUTPUT;
+	                return true;
+	            }
+	
+	            if (runState == RunState.WAITING_INPUT) {
+	                if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+	                    host.print("\n");
+	                    interpreter.provideInput(inputBuffer.toString());
+	                    inputBuffer.setLength(0);
+	                    runState = RunState.RUNNING;
+	                    return true;
+	                }
+	                if (key == GLFW.GLFW_KEY_BACKSPACE && inputBuffer.length() > 0) {
+	                    inputBuffer.deleteCharAt(inputBuffer.length() - 1);
+	                    host.backspaceChar();
+	                    return true;
+	                }
+	            }
+	            return true;
             case RUN_OUTPUT:
                 mode = Mode.EDITOR;
                 restoreEditorAfterRun();
@@ -310,6 +351,13 @@ public class QBasicApplication extends AbstractEditorApplication {
         if (mode == Mode.MENU)       return true;
         if (mode == Mode.DIALOG)     return true;
         if (mode == Mode.RUN_OUTPUT) return true;
+        if (mode == Mode.RUNNING && runState == RunState.WAITING_INPUT) {
+            if (cp >= 32 && cp != 127) {
+                inputBuffer.append(cp);
+                host.print(String.valueOf(cp));    // echo to display
+            }
+            return true;
+        }
 
         if (mode == Mode.EDITOR && focus == Focus.IMMEDIATE) {
             immediate.insert(cp);
@@ -338,9 +386,11 @@ public class QBasicApplication extends AbstractEditorApplication {
 
         host = new QBasicHostImpl(this);
         interpreter = new QBasicInterpreter(host);
-        interpreter.run(pendingSourceSnapshot);
+        interpreter.start(pendingSourceSnapshot);
 
-        mode = Mode.RUN_OUTPUT;
+        inputBuffer.setLength(0);
+        runState = RunState.RUNNING;
+        mode = Mode.RUNNING;
     }
 
     private void restoreEditorAfterRun() {
