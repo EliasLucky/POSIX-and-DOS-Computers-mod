@@ -41,9 +41,9 @@ import net.minecraft.client.gui.GuiGraphics;
  * }</pre>
  */
 public abstract class TerminalApplication {
-
+	/** Width of one character cell in pixels. */
     public static final int CELL_W = 8;
-
+    /** Height of one character cell in pixels. */
     public static final int CELL_H = 16;
 
     protected final ComputerTerminalScreen screen;
