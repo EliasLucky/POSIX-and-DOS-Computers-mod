@@ -26,7 +26,7 @@ public class DosMccmdDriver implements Driver {
         this.peripheral = ctx.bus().get(matches.get(0));
         if (peripheral == null) return DriverInitResult.FAILED;
 
-        String devName = ctx.registerDevice("MCCMD", new Handler());
+        String devName = ctx.registerDevice("MCCMD", DeviceHandler.of(peripheral));
         if (devName == null) {
             ctx.log("MCCMD.SYS: name MCCMD already in use");
             return DriverInitResult.FAILED;

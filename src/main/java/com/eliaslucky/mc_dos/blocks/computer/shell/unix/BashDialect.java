@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.blocks.computer.shell.unix;
+
+import com.eliaslucky.mc_dos.api.shell.ShellDialect;
+
 /**
  * Bash. A superset of POSIX sh with GNU extensions:
  *   &&, ||, !        (logical operators)

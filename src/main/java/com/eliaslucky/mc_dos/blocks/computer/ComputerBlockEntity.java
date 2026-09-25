@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.eliaslucky.mc_dos.AllBlockEntities;
+import com.eliaslucky.mc_dos.api.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.hardware.PeripheralBus;
 import com.eliaslucky.mc_dos.api.shell.Pipeline;
@@ -13,7 +14,6 @@ import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.api.shell.StreamResolver;
 import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
-import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -110,6 +110,7 @@ public class ComputerBlockEntity extends BlockEntity {
 	        	ExecutableRegistry.Entry exe = ExecutableRegistry.get(proc.osFamily(), fileName);
 	            if (exe != null) {
 	                node.content = exe.templateContent();
+	                node.executeBit = true;
 	            } else {
 	                // 2. Everything else is the OS's responsibility.
 	                String content = proc.defaultFileContent(fileName);

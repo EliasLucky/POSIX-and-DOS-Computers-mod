@@ -1,4 +1,4 @@
-package com.eliaslucky.mc_dos.blocks.computer.kernel.posix;
+package com.eliaslucky.mc_dos.blocks.computer.kernel.linux;
 
 import java.util.LinkedHashMap;
 import java.util.List;

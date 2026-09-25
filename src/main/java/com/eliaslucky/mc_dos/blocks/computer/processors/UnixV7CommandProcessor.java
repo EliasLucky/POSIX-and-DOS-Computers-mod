@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.api.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.api.shell.StreamResolver;
@@ -8,7 +9,6 @@ import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
 import com.eliaslucky.mc_dos.blocks.computer.fs.PosixFileNamePolicy;
 import com.eliaslucky.mc_dos.blocks.computer.kernel.unix.UnixV7Kernel;
-import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.blocks.computer.processors.posix.ShellRunner;
 import com.eliaslucky.mc_dos.blocks.computer.shell.posix.PosixStreamResolver;
 import com.eliaslucky.mc_dos.blocks.computer.shell.unix.BourneV7Dialect;

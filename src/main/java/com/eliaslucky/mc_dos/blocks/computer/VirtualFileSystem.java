@@ -178,6 +178,9 @@ public class VirtualFileSystem {
 
 		public long createdTime  = System.currentTimeMillis();
 		public long modifiedTime = System.currentTimeMillis();
+		
+	    /** POSIX execute bit. Ignored under DOS (a .EXE runs because of its extension). */
+	    public boolean executeBit   = false;
 
 		public Node(String name, boolean isDirectory) {
 			this.name = (name == null) ? "" : name;
@@ -197,6 +200,7 @@ public class VirtualFileSystem {
 			tag.putString("Content", content);
 			tag.putLong("Created",	createdTime);
 			tag.putLong("Modified", modifiedTime);
+			tag.putBoolean("Exec",  executeBit);
 
 			ListTag childrenList = new ListTag();
 			for (Node child : children.values()) {
@@ -211,6 +215,7 @@ public class VirtualFileSystem {
 			node.content = tag.getString("Content");
 			node.createdTime  = tag.contains("Created")  ? tag.getLong("Created")  : System.currentTimeMillis();
 			node.modifiedTime = tag.contains("Modified") ? tag.getLong("Modified") : node.createdTime;
+			node.executeBit   = tag.contains("Exec")     && tag.getBoolean("Exec");
 			node.parent = parentNode;
 
 			ListTag childrenList = tag.getList("Children", Tag.TAG_COMPOUND);

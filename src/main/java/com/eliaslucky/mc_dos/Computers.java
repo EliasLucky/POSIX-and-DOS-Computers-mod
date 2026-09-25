@@ -2,6 +2,8 @@ package com.eliaslucky.mc_dos;
 
 import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
 import com.eliaslucky.mc_dos.network.ModMessages;
+import com.eliaslucky.mc_dos.registry.ModDrivers;
+import com.eliaslucky.mc_dos.registry.ModExecutables;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.world.item.Item;
@@ -53,6 +55,10 @@ public class Computers
 
 	private void commonSetup(final FMLCommonSetupEvent event) {
 		event.enqueueWork(ModMessages::register);
+		event.enqueueWork(() -> {
+		    ModExecutables.register();
+		    ModDrivers.register();
+		});
 	}
 
 	public void buildContents(BuildCreativeModeTabContentsEvent event) {

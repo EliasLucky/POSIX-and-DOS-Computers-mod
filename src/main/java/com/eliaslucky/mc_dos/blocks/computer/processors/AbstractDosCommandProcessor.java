@@ -1,12 +1,12 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.api.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.api.hardware.DeviceHandler;
 import com.eliaslucky.mc_dos.api.hardware.DeviceLookup;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
-import com.eliaslucky.mc_dos.blocks.computer.processors.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.blocks.computer.shell.dos.DosShellDialect;
 
 import java.nio.charset.StandardCharsets;

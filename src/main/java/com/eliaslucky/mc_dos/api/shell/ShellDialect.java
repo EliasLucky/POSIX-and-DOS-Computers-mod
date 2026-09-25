@@ -9,25 +9,34 @@ import java.util.List;
  * behaves according to the enabled features.
  */
 public abstract class ShellDialect {
+    // Feature flags
+    public boolean supportsPipes()                    { return true; }
+    public boolean supportsLogicalOps()               { return false; }  // && ||
+    public boolean supportsBackground()               { return false; }  // &
+    public boolean supportsHereDoc()                  { return false; }  // <<
+    public boolean supportsAppend()                   { return false; }  // >>
+    public boolean supportsPositional()               { return false; }  // $1..$9
+    public boolean supportsVariables()                { return false; }  // $VAR
+    public boolean supportsControlFlow()              { return false; }  // if/while/for
+    public boolean supportsFunctions()                { return false; }  // foo() { ... }
+    public boolean supportsCommandSubst()             { return false; }  // `cmd` or $(cmd)
+    public boolean supportsArithmetic()               { return false; }  // $(( ))
+    public boolean supportsParamExpansion()           { return false; }  // ${VAR:-default}
+    public boolean supportsBraceExpand()              { return false; }  // {a,b,c}
+    public boolean supportsExtendedTest()             { return false; }  // [[ ]]
 
-    // ── Feature flags ───────────────────────────────────────────────────
-    public boolean supportsPipes()         { return true; }
-    public boolean supportsLogicalOps()    { return false; }   // && ||
-    public boolean supportsBackground()    { return false; }   // &
-    public boolean supportsHereDoc()       { return false; }   // <<
-    public char    separatorChar()         { return ';'; }
-
+    public char separatorChar() { return ';'; }
+    
     /** Human name; used by HELP. */
     public abstract String name();
 
-    // ── Parse ───────────────────────────────────────────────────────────
+    // Parse
     public Pipeline parse(String line) {
         List<Pipeline.Stage> stages = new ArrayList<>();
         List<LogicalOp> between = new ArrayList<>();
 
         StringBuilder current = new StringBuilder();
         boolean inSingle = false, inDouble = false;
-        LogicalOp pending = null;
 
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
@@ -48,22 +57,32 @@ public abstract class ShellDialect {
             }
 
             // Pipe `|` or logical OR `||`
-            if (c == '|' && supportsPipes()) {
-                boolean isOr = supportsLogicalOps()
-                        && i + 1 < line.length() && line.charAt(i + 1) == '|';
-                if (current.length() > 0) {
-                    stages.add(parseStage(current.toString()));
-                    current.setLength(0);
+            if (c == '|') {
+                boolean isOr = i + 1 < line.length() && line.charAt(i + 1) == '|';
+                if (isOr && supportsLogicalOps()) {
+                    if (current.length() > 0) {
+                        stages.add(parseStage(current.toString()));
+                        current.setLength(0);
+                    }
+                    between.add(LogicalOp.OR);
+                    i++;
+                    continue;
                 }
-                between.add(isOr ? LogicalOp.OR : LogicalOp.PIPE);
-                if (isOr) i++;
-                continue;
+                if (!isOr && supportsPipes()) {
+                    if (current.length() > 0) {
+                        stages.add(parseStage(current.toString()));
+                        current.setLength(0);
+                    }
+                    between.add(LogicalOp.PIPE);
+                    continue;
+                }
+                // Not a recognized operator — literal.
             }
 
-            // Logical AND `&&`
-            if (c == '&' && supportsLogicalOps()) {
+            // Logical AND `&&` or background `&`
+            if (c == '&') {
                 boolean isAnd = i + 1 < line.length() && line.charAt(i + 1) == '&';
-                if (isAnd) {
+                if (isAnd && supportsLogicalOps()) {
                     if (current.length() > 0) {
                         stages.add(parseStage(current.toString()));
                         current.setLength(0);
@@ -72,7 +91,7 @@ public abstract class ShellDialect {
                     i++;
                     continue;
                 }
-                if (supportsBackground()) {
+                if (!isAnd && supportsBackground()) {
                     if (current.length() > 0) {
                         stages.add(parseStage(current.toString()));
                         current.setLength(0);
@@ -80,12 +99,15 @@ public abstract class ShellDialect {
                     between.add(LogicalOp.BACKGROUND);
                     continue;
                 }
+                // Not a recognized operator — literal.
             }
 
             current.append(c);
         }
         if (current.length() > 0) stages.add(parseStage(current.toString()));
 
+        // Trailing separator produces an extra `between` with no stage to
+        // connect to — drop them.
         while (between.size() >= stages.size()) between.remove(between.size() - 1);
         return new Pipeline(stages, between);
     }

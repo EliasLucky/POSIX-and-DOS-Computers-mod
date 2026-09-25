@@ -1,3 +1,7 @@
+package com.eliaslucky.mc_dos.blocks.computer.shell.unix;
+
+import com.eliaslucky.mc_dos.api.shell.ShellDialect;
+
 /**
  * Bourne shell as shipped with UNIX v7 (1979).
  * Adds shell variables, `export`, control flow (if/then/fi, while, for,
