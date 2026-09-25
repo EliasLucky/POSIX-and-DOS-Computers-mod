@@ -6,8 +6,44 @@ import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
 
 import net.minecraft.client.gui.GuiGraphics;
 
+/**
+ * A client-side TUI program. Subclass this to create a full-screen
+ * application that runs inside a computer terminal.
+ *
+ * <p>Lifecycle:
+ * <ol>
+ *   <li>The server returns {@code "APP_LAUNCH:NAME:..."} from an
+ *       executable runner.</li>
+ *   <li>The client looks up {@code NAME} in
+ *       {@link TerminalApplicationRegistry}.</li>
+ *   <li>{@link TerminalApplicationRegistry.AppFactory#create}
+ *       constructs an instance.</li>
+ *   <li>{@link ComputerTerminalScreen#launchApp} hands over the screen.</li>
+ *   <li>Render and input events are routed to the app until it closes.</li>
+ * </ol>
+ *
+ * <h2>Example</h2>
+ * <pre>{@code
+ * public class CalcApplication extends TerminalApplication {
+ *     public CalcApplication(ComputerTerminalScreen screen,
+ *                            String[] args, String content) {
+ *         super(screen);
+ *     }
+ *     @Override public void render(GuiGraphics g, int mx, int my, float p) {
+ *         // draw calculator
+ *     }
+ *     @Override public boolean keyPressed(int k, int s, int m) {
+ *         // handle digit keys
+ *         return true;
+ *     }
+ *     @Override public String getTitle() { return "Calculator"; }
+ * }
+ * }</pre>
+ */
 public abstract class TerminalApplication {
+
     public static final int CELL_W = 8;
+
     public static final int CELL_H = 16;
 
     protected final ComputerTerminalScreen screen;

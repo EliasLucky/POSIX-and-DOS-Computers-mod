@@ -36,7 +36,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 	@Override
 	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
 		ComputerBlockEntity be = new ComputerBlockEntity(pos, state);
-		be.setComputerType(this.computerType);
+		//be.setComputerType(this.computerType);
 		return be;
 	}
 
