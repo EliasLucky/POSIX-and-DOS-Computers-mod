@@ -1,30 +1,33 @@
 # Computer Block Initialization
 
+Everytime player clicks Right Mouse Button on `ComputerBlock` the Minecraft function `use(...)` is called.
 
+When the player uses the block, on both sides, `.use()` fires.
+On the **CLIENT-SIDE** open the terminal screen GUI for the player. On the **SERVER-SIDE** boot up the machine. The two processess happen concurrently.
+
+The pipeline below explains the **SERVER-SIDE** booting sequence.
 
 ## Pipeline
 
-Everytime player clicks Right Mouse Button on `ComputerBlock` the Minecraft function `use(...)` is called.
+On the **SERVER-SIDE**, `use()` calls `ComputerBlockEntity.setComputerType(type)`. This method processes the following:
 
-The player uses the block. On both sides, `.use()` fires. The **CLIENT-SIDE** `use()` opens the terminal screen; the **SERVER-SIDE** boots the machine. The two happen concurrently.
+1. Tell the filesystem which naming **policy** to use.
 
-On the server, `use()` calls `ComputerBlockEntity.setComputerType(type)`. This method processes the following:
+   A **MS-DOS** machine canonicalizes every filename to uppercase 8.3 form (ABCDEFGH.TXT), and looks names up **case-insensitively**.
 
-1. Tell the filesystem which naming policy to use.
+   A **Linux** machine is **case-sensetive** and would treat "Readme.txt" and "readme.txt" as two separate files.
 
-   A DOS machine canonicalizes every filename to uppercase 8.3 form (ABCDEFGH.TXT), and looks names up case-insensitively.
+   The naming policy comes from the command processor.
 
-   A Linux machine is case-sensetive and would treat "Readme.txt" and "readme.txt" as two separate files. The policy comes from the command processor.
-
-2. If it's first-time boot for the machine then setup the root filesystem. More specifically, go through `ComputerType.defaultFiles`. A list which has elements like **"COMMAND.COM", "DOS/", "DOS/QBASIC.EXE"**. Create corresponding node for each.
+3. If it's **first-time boot** for the machine then setup the root filesystem. More specifically, go through `ComputerType.defaultFiles`. A list which has elements like **"COMMAND.COM", "DOS/", "DOS/QBASIC.EXE"**. Create corresponding node for each.
 
    Directories get created implicitly if a path has multiple segments.
 
    For files, it asks the executable registry for a template body if the name matches a registered executable, and otherwise asks the command processor for default content. Therefore **QBASIC.EXE** gets an MZ header (because it has an executable registry), and **CONFIG.SYS** gets **DEVICE=** line, and neither of those decisions lives in the block entity itself.
 
-3. Setup **ENVIRONMENT** variables. **PATH** gets the default search path from the command processor (For MS-DOS `C:\DOS;C:\`; For UNIX `/bin:/usr/bin`; etc.). **COMSPEC**, **PROMPT**, and anything else the OS needs are written here too. This map is what **SET** (MS-DOS command), **export** (Linux), and every fenvironment-variable expansion will read.
+4. Setup **ENVIRONMENT** variables. **PATH** gets the default search path from the command processor (For MS-DOS `C:\DOS;C:\`; For UNIX `/bin:/usr/bin`; etc.). **COMSPEC**, **PROMPT**, and anything else the OS needs are written here too. This map is what **SET** (MS-DOS command), **export** (Linux), and every fenvironment-variable expansion will read.
 
-4. Boot the kernel.
+5. Boot the kernel.
 
    - The block entity asks the command processor reference fresh new kernel: `processor.createKernel()`. For a **MS-DOS** machine this returns `new DosKernel()`; for a **UNIX v7** machine, `new UnixV7Kernel()`; for **Linux**, `new LinuxKernel()`; and so on. 
 
@@ -38,9 +41,11 @@ On the server, `use()` calls `ComputerBlockEntity.setComputerType(type)`. This m
 
        - **Linux:** the kernel scans the bus, and for each peripheral it checks whether the "linux" family has a matching driver. If so, the driver binds to every peripheral of that class, up to some cap, and registers them as `/dev/example0`, `/dev/example1`, and so on. Kernel sets up `LinuxDriverContext` with the bus, device table. Then call `driver.init(ctx)`.
 
-5. Finally, command prompt appears from the command processor's `getPrompt(currentPath)` method.
+6. Finally, command prompt appears from the command processor's `getPrompt(currentPath)` method.
 
    For MS-DOS: `C:\>`; For UNIX: `root`; For Linux: `root@p4-server`.
+
+---
 
 *At the end of the kernel boot sequence, the `ComputerBlockEntity` finally has a complete intitialized kernel with a populated device table and logs.*
 
@@ -60,3 +65,4 @@ ComputerBlockEntity entity contains NBT tags which are:
 
 ## How to create custom computer block
 
+[TODO: WRITE THIS]
