@@ -6,21 +6,23 @@ The server receives the packet on the game thread, looks up the block entity, an
 
 `executeLine(...)` starts by asking the command processor for its shell dialect. See "Syntax processor" below.
 
-## Process order
+## Command Process order
 
 Depending on the Operating System (command processor) the order in which possible executable command is found may differ.
 
-For MS-DOS (`AbstractDosCommandProcessor`) it will be:
+`commandProcessor.process` processes the command in these possibles orders.
 
-[INSERT .PNG GRAPH IMAGE]
+- For MS-DOS (`AbstractDosCommandProcessor`) it will be:
 
-For Linux (`LinuxCommandProcessor`) it will be:
+**[INSERT .PNG GRAPH IMAGE]**
 
-[INSERT .PNG GRAPH IMAGE]
+- For Linux (`LinuxCommandProcessor`) it will be:
 
-For Unix V7 (`UnixV7CommandProcessor`) it will be:
+**[INSERT .PNG GRAPH IMAGE]**
 
-[INSERT .PNG GRAPH IMAGE CUZ THEY LOOK BEAUTIFULLLLLL]
+- For Unix V7 (`UnixV7CommandProcessor`) it will be:
+
+**[INSERT .PNG GRAPH IMAGE CUZ THEY LOOK BEAUTIFULLLLLL]**
 
 
 
@@ -31,7 +33,7 @@ For MS-DOS: `DosShellDialect`; For UNIX v7: `UnixV7Dialect`; For Linux: `BashDia
 
 Each dialect knows what operators its shell supports. (For example, DOS has `>`, `>>`, `<`, `|`, and `;;`; UNIX v7 has those plus `&` for background; Linux has `&&`, `||`, `[[ ... ]]` and many more.)
 
-The dialect parses the line into a `Pipeline`. For our example let's attempt to execute `TYPE log.txt | FIND "error" > out.txt` on MS-DOS 6.0, that's two Stage objects. The first has command **TYPE**, args **LOG.TXT**, and a stdout redirect that's a pipe. The second has command **FIND**, args "error", and a stdout redirect that targets the file **OUT.TXT** in write mode. The pipe between them is recorded in the pipeline's between list.
+The dialect parses the line into a `Pipeline`. For our example let's attempt to execute `TYPE log.txt | FIND "error" > out.txt` on MS-DOS 6.0 which has two Stage objects. The first has command **TYPE**, args **LOG.TXT**, and a stdout redirect `|`. The second has command **FIND**, args "error", and a stdout redirect that targets the file **OUT.TXT** in write mode. The pipe between them is recorded in the pipeline's between list.
 
 `PipelineExecutor.execute` iterates over the stages.
 
@@ -40,7 +42,7 @@ The dialect parses the line into a `Pipeline`. For our example let's attempt to 
 Inside the MS-DOS command processor, `processWithStdin` stashes the stdin string in a field and delegates to the normal process method. That method does its dispatch in order:
 1. It tries version-specific handlers - on MS-DOS 6.0, **MOVE** and **DELTREE**; on MS-DOS 3.3, the newer commands return `Bad command or file name`.
 2. It tries the help system - if the args were `/?`, the processor would return the help text for **TYPE** and stop.
-3. It tries the device table 9 the kernel's `getDevices().isDevice("TYPE")` returns `false` because no driver registered a device named **TYPE**.
+3. It tries the device table - the kernel's `getDevices().isDevice("TYPE")` returns `false` because no driver registered a device named **TYPE**.
 4. It tries the executable registry - walks the `PATH` from the environment, splits on ;, and looks for **TYPE.EXE** or **TYPE.COM** or **TYPE.BAT** in each directory. There is none.
 5. Finally it falls through to the **built-in** switch and matches case `"TYPE": return doType(vfs, arg)`. The `doType` method resolves **LOG.TXT** in the current directory and returns its content as a string.
 
@@ -60,7 +62,35 @@ The client receives the packet. `ComputerTerminalScreen.appendOutput` checks the
 
 ![Shell syntax parsing](./images/shell_syntax_parsing.png)
 
-## Command Processor
+## Driver Command Processor
+
+For our example let's attempt to execute `MCCMD give @p diamod` on MS-DOS 6.0
+
+Normal process method is called. That method does its dispatch in order:
+1. It tries version-specific handlers - on MS-DOS 6.0, **MOVE** and **DELTREE**; on MS-DOS 3.3, the newer commands return `Bad command or file name`.
+2. It tries the help system - if the args were `/?`, the processor would return the help text for **TYPE** and stop.
+
+3. It tries the device table - the processor asks the kernel:
+   `kernel.getDevices().isDevice("MCCMD")`. The MS-DOS kernel's device
+   table contains every name that a driver registered at boot:
+   `CON`, `NUL`, `PRN`, `AUX`, and - because `MCCMD.SYS` loaded
+   successfully - `MCCMD`.
+
+   Processor decides this is a device command. The check happens
+
+   The lookup returns a `DeviceHandler`. This handler was installed by
+   `DosMccmdDriver.init()` when it called
+   `ctx.registerDevice("MCCMD", DeviceHandler.of(peripheral))`.
+
+4. The processor writes the argument bytes plus a trailing newline: `handler.onWrite((argRaw + "\n").getBytes(StandardCharsets.UTF_8));`
+
+   For the default handler built by `DeviceHandler.of`, `onWrite` delegates straight to `Peripheral.write(bytes)`. In our example the peripheral will be `MinecraftCommandTranslatorBlockEntity` and its write method queues the bytes into a pendingInput buffer.
+
+   The command has been delivered to the hardware.
+
+5. The peripheral block entity executes on the next tick. Every tick, the `MCCMD` peripheral block entity drains its input buffer. `MinecraftCommandTranslatorBlockEntity.processPendingCommands` splits the buffer on newlines, strips any `/`, and runs each line as a Minecraft command via `MinecraftServer.getCommands().performPrefixedCommand(...)`.
+
+   In our example we attempted to execute `give @p diamond` which runs succesfully.
 
 **The process graph:**
 
