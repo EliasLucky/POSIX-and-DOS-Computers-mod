@@ -3,17 +3,38 @@ package com.eliaslucky.mc_dos.api.hardware;
 import java.util.List;
 
 /**
- * Read-only view of a kernel's device namespace. The shell calls this
- * to decide whether a typed command names a device. It never knows
- * which devices exist — that's the kernel's business.
+ * A read-only view of a kernel's device namespace. The shell uses this
+ * to decide whether a typed command names a device (e.g. {@code MCCMD}
+ * on DOS, {@code /dev/lp0} on Linux).
+ *
+ * <p>Drivers do not implement this. They call
+ * {@link DriverContext#registerDevice} and the kernel's device table
+ * does the lookup.
+ *
+ * @see Kernel#getDevices()
  */
 public interface DeviceLookup {
-
+    /**
+     * Whether a name is a registered device.
+     *
+     * @param name the name to check; matching is case-insensitive on DOS
+     * @return {@code true} if the name is registered
+     */
     boolean isDevice(String name);
 
-    /** Returns the handler or null if not a device. */
+    /**
+     * Resolve a device name to its handler.
+     *
+     * @param name the device name
+     * @return the handler, or {@code null} if not registered
+     */
     DeviceHandler lookup(String name);
 
-    /** Names visible to the shell, for HELP listings. */
+    /**
+     * All registered device names, for {@code HELP} listings and
+     * directory enumeration.
+     *
+     * @return an immutable list, possibly empty
+     */
     List<String> names();
 }
