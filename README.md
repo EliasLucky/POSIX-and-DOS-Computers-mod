@@ -12,7 +12,7 @@ Minecraft mod that adds Disk Operating System (DOS) Computers with BASIC program
 
 ## Addon support
 
-This mod comes with addon support. Template addon mod project is provided through this [link]). Documentation is [here](./docs).
+This mod comes with addon support. Template addon mod project is provided through this [link](https://github.com/EliasLucky/POSIX-and-DOS-Computers-mod-Addon-Template). Documentation is [here](./docs).
 
 # Contribution
 
