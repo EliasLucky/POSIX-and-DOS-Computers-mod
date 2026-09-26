@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.blocks.computer.processors;
 
+import com.eliaslucky.mc_dos.api.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.api.shell.StreamResolver;
@@ -112,8 +113,7 @@ public class LinuxCommandProcessor implements ICommandProcessor {
                 String shebang = nl < 0 ? file.content.substring(2)
                                         : file.content.substring(2, nl);
                 String interpreter = shebang.trim().split("\\s+")[0];
-                var entry = com.eliaslucky.mc_dos.api.exec.ExecutableRegistry
-                        .get(osFamily(), interpreter.toUpperCase(Locale.ROOT));
+                var entry = ExecutableRegistry.get(osFamily(), interpreter.toUpperCase(Locale.ROOT));
                 if (entry == null) {
                     return dir + "/" + name + ": bad interpreter: " + interpreter;
                 }
@@ -122,8 +122,7 @@ public class LinuxCommandProcessor implements ICommandProcessor {
             }
 
             // Registered binary.
-            var entry = com.eliaslucky.mc_dos.api.exec.ExecutableRegistry
-                    .get(osFamily(), (dir + "/" + name).toUpperCase(Locale.ROOT));
+            var entry = ExecutableRegistry.get(osFamily(), (dir + "/" + name).toUpperCase(Locale.ROOT));
             if (entry == null) continue;
             if (!entry.format().matches(name, file)) continue;
             return entry.runner().run(computer, args, file);

@@ -7,6 +7,8 @@ import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileError;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileOpResult;
 import com.eliaslucky.mc_dos.blocks.computer.shell.dos.DosShellDialect;
 
 import java.nio.charset.StandardCharsets;
@@ -199,23 +201,9 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 
 	protected String doMd(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
 		if (arg.isEmpty()) return "Required parameter missing";
-		String pathStr = arg.replace('/', '\\');
-		int lastSlash  = pathStr.lastIndexOf('\\');
-		VirtualFileSystem.Node parent = vfs.getCurrentDir();
-		String name = pathStr;
-		if (lastSlash != -1) {
-			String parentPath = pathStr.substring(0, lastSlash);
-			name = pathStr.substring(lastSlash + 1);
-			parent = parentPath.isEmpty() ? vfs.getRoot() : vfs.resolvePath(parentPath);
-		}
-		if (parent == null || !parent.isDirectory) return "Path not found";
-		if (name.isEmpty()) return "Invalid directory name";
-		String upper = vfs.canonicalize(name);
-		if (upper.isEmpty()) return "Invalid directory name";
-		if (parent.children.containsKey(upper)) return "Directory already exists";
-		VirtualFileSystem.Node folder = new VirtualFileSystem.Node(upper, true);
-		parent.addChild(folder);
-		c.setChanged();
+		FileOpResult r = vfs.createDirectory(arg);
+	    if (!r.success()) return r.messageFor(osFamily());
+	    c.setChanged();
 		return "";
 	}
 	
@@ -259,36 +247,13 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		if (srcNode == null || srcNode.isDirectory) return "File not found";
 
 		VirtualFileSystem.Node destNode = vfs.resolvePath(destPath);
-		VirtualFileSystem.Node destParent;
-		String destFileName;
+		String actualDest = (destNode != null && destNode.isDirectory)
+	            ? destPath + "\\" + srcNode.name
+	            : destPath;
 
-		if (destNode != null && destNode.isDirectory) {
-			destParent	 = destNode;
-			destFileName = srcNode.name;
-		} else {
-			String clean = destPath.replace('/', '\\');
-			int lastSlash = clean.lastIndexOf('\\');
-			if (lastSlash != -1) {
-				String parentPath = clean.substring(0, lastSlash);
-				destFileName = clean.substring(lastSlash + 1);
-				destParent	 = parentPath.isEmpty() ? vfs.getRoot() : vfs.resolvePath(parentPath);
-			} else {
-				destParent	 = vfs.getCurrentDir();
-				destFileName = clean;
-			}
-		}
-
-		if (destParent == null || !destParent.isDirectory) return "Path not found";
-		if (destFileName.isEmpty()) return "Invalid file name";
-
-		String upperDest = vfs.canonicalize(destFileName);
-		if (upperDest.isEmpty()) return "Invalid file name";
-		VirtualFileSystem.Node copied = new VirtualFileSystem.Node(upperDest, false);
-		copied.content = srcNode.content;
-		copied.modifiedTime = System.currentTimeMillis();
-		destParent.addChild(copied);
-
-		c.setChanged();
+	    FileOpResult r = vfs.copyFile(srcPath, actualDest);
+	    if (!r.success()) return r.messageFor(osFamily());
+	    c.setChanged();
 		return "\t\t1 file(s) copied.";
 	}
 
@@ -297,7 +262,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 		String[] parts = arg.split("\\s+", 2);
 		if (parts.length < 2) return "Required parameter missing";
 
-		String targetPath = parts[0];
+		String target = parts[0];
 		String newName	  = parts[1];
 
 		// REN only accepts a bare name as the destination.
@@ -305,39 +270,25 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 			int last = Math.max(newName.lastIndexOf('\\'), newName.lastIndexOf('/'));
 			newName = newName.substring(last + 1);
 		}
-
-		VirtualFileSystem.Node target = vfs.resolvePath(targetPath);
-		if (target == null) return "File not found";
-
-		VirtualFileSystem.Node parent = target.parent;
-		if (parent == null) return "Permission denied";
-
-		String upperNew = vfs.canonicalize(newName);
-		if (upperNew.isEmpty()) return "Invalid file name";
-		if (parent.children.containsKey(upperNew)) {
-			return "Duplicate file name or file not found";
-		}
-
-		parent.children.remove(target.name.toUpperCase(Locale.ROOT));
-		target.name = upperNew;
-		target.modifiedTime = System.currentTimeMillis();
-		parent.addChild(target);
-
-		c.setChanged();
+		FileOpResult r = vfs.renameFile(target, newName);
+	    if (!r.success()) {
+	        // DOS's specific wording for a duplicate.
+	        if (r.error() == FileError.DIRECTORY_PROBLEM) {
+	            return "Duplicate file name or file not found";
+	        }
+	        return r.messageFor(osFamily());
+	    }
+	    c.setChanged();
+		
 		return "";
 	}
 
 	protected String doDel(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
 		if (arg.isEmpty()) return "Required parameter missing";
-		VirtualFileSystem.Node target = vfs.resolvePath(arg);
-		if (target == null) return "File not found";
-		if (target.isDirectory) return "Access denied - target is a directory";
-		if (target.parent == null) return "File not found";
-
-		c.getFileSystem().getCurrentDir(); // no-op, keeps linters happy
-		boolean removed = target.parent.children.remove(target.name) != null;
-		if (removed) c.setChanged();
-		return removed ? "" : "File not found";
+		FileOpResult r = vfs.deleteFile(arg);
+	    if (!r.success()) return r.messageFor(osFamily());
+	    c.setChanged();
+		return "";
 	}
 
 	protected String doType(VirtualFileSystem vfs, String arg) {
