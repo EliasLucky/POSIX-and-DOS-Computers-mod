@@ -3,6 +3,7 @@ package com.eliaslucky.mc_dos.blocks.computer.drive;
 import com.eliaslucky.mc_dos.api.vfs.DiskMedia;
 import com.eliaslucky.mc_dos.api.vfs.DriveType;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.items.RemovableMediaItem;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;

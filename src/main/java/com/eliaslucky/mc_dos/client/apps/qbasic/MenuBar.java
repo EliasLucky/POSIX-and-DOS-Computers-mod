@@ -7,7 +7,6 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class MenuBar {
-
     private final List<Menu> menus;
     private boolean active;
     private int selectedMenu = -1;   // -1 = none yet

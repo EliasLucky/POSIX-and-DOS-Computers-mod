@@ -51,6 +51,12 @@ public class ModMessages {
 			.encoder(ClientboundTerminalOutputPacket::encode)
 			.consumerMainThread(ClientboundTerminalOutputPacket::handle)
 			.add();
+		
+		net.messageBuilder(ClientboundFileWriteResultPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+        	.decoder(ClientboundFileWriteResultPacket::new)
+        	.encoder(ClientboundFileWriteResultPacket::encode)
+        	.consumerMainThread(ClientboundFileWriteResultPacket::handle)
+        	.add();
 	}
 
 	public static void sendToServer(Object message) {
