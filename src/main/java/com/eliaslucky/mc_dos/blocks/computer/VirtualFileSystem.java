@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -16,7 +17,11 @@ public class VirtualFileSystem {
 	private final Node root;
 	private Node currentDir;
 	private String currentPath = "/";
+	/** A mounted volume. */
+	public record Mount(String id, Node rootNode, boolean readOnly, String source) {}
 
+	private final Map<String, Mount> mounts = new LinkedHashMap<>();
+	
 	/** Default to POSIX until an OS is bound. */
 	public VirtualFileSystem() {
 		this(PosixFileNamePolicy.INSTANCE);
@@ -43,71 +48,96 @@ public class VirtualFileSystem {
 	public void setCurrentPath(String path) {
 		Node resolved = resolvePath(path);
 		if (resolved == null || !resolved.isDirectory) {
-	        // Invalid path — silently keep the current directory.
-	        // DOS would print "Invalid directory" here, but that's the
-	        // caller's job (doCd). The VFS itself refuses to move.
 	        return;
 	    }
 	    this.currentDir  = resolved;
 	    this.currentPath = getAbsolutePath(resolved);
-		//this.currentPath = path;
-		//Node resolved = resolvePath(path);
-		//if (resolved != null && resolved.isDirectory) {
-		//	this.currentDir = resolved;
-		//}
 	}
 
 	public Node resolvePath(String path) {
-		if (path == null || path.trim().isEmpty()) return currentDir;
+	    if (path == null || path.trim().isEmpty()) return currentDir;
 
-		String cleanPath = path.trim().replace('\\', '/');
-		Node startNode = currentDir;
+	    String clean = path.trim().replace('\\', '/');
 
-		// DOS drive letter or standard / root
-		if (cleanPath.matches("(?i)^[A-Z]:.*")) {
-			startNode = root;
-			int colonIndex = cleanPath.indexOf(':');
-			cleanPath = cleanPath.substring(colonIndex + 1);
-		} else if (cleanPath.startsWith("/")) {
-			startNode = root;
-		}
+	    // DOS drive letter: "A:\FOO"
+	    if (clean.matches("(?i)^[A-Z]:.*")) {
+	        String drive = clean.substring(0, 2).toUpperCase(Locale.ROOT);
+	        Mount m = mounts.get(drive);
+	        if (m == null) return null;
+	        return resolveFrom(m.rootNode(), clean.substring(2));
+	    }
 
-		if (cleanPath.startsWith("/")) {
-			cleanPath = cleanPath.substring(1);
-		}
+	    // POSIX absolute path: check mounts first
+	    if (clean.startsWith("/")) {
+	        String best = null;
+	        for (String id : mounts.keySet()) {
+	            if (!id.startsWith("/")) continue;
+	            if (clean.equals(id) || clean.startsWith(id + "/")) {
+	                if (best == null || id.length() > best.length()) best = id;
+	            }
+	        }
+	        if (best != null) {
+	            Mount m = mounts.get(best);
+	            String rest = clean.substring(best.length());
+	            return resolveFrom(m.rootNode(), rest);
+	        }
+	        return resolveFrom(root, clean);
+	    }
 
-		if (cleanPath.isEmpty()) return root;
+	    // Relative path from currentDir
+	    return resolveFrom(currentDir, clean);
+	}
 
-		for (String segment : cleanPath.split("/+")) {
-			if (segment.isEmpty() || segment.equals(".")) continue;
-			if (segment.equals("..")) {
-				if (startNode.parent != null) startNode = startNode.parent;
-				continue;
-			}
-			String key = policy.lookupKey(segment);
-			Node child = startNode.children.get(key);
-			if (child == null) return null;
-			startNode = child;
-		}
-		return startNode;
+	/** Walk a path string from a starting node. */
+	private static Node resolveFrom(Node start, String path) {
+	    if (path.isEmpty() || path.equals("/")) return start;
+	    String p = path.startsWith("/") ? path.substring(1) : path;
+
+	    Node current = start;
+	    for (String segment : p.split("/+")) {
+	        if (segment.isEmpty() || segment.equals(".")) continue;
+	        if (segment.equals("..")) {
+	            if (current.parent != null) current = current.parent;
+	            continue;
+	        }
+	        Node child = current.children.get(segment);
+	        if (child == null) return null;
+	        current = child;
+	    }
+	    return current;
 	}
 
 	public String getAbsolutePath(Node node) {
-	    String sep    = policy.pathSeparator();
-	    String prefix = policy.rootPrefix();
+	    if (node == null) return policy.pathSeparator();
 
-	    if (node == null || node == root) {
-	        // Root: DOS "C:\", POSIX "/"
-	        return prefix.isEmpty() ? sep : prefix + sep;
+	    // Find the topmost ancestor.
+	    Node top = node;
+	    while (top.parent != null) top = top.parent;
+
+	    // Primary tree: existing behavior.
+	    if (top == root) {
+	        return buildPathFrom(node, root, policy.pathSeparator(), policy.rootPrefix());
 	    }
 
+	    // Mounted tree: find which mount owns it.
+	    for (Mount m : mounts.values()) {
+	        if (m.rootNode() == top) {
+	            String sub = buildPathFrom(node, top, policy.pathSeparator(), "");
+	            return m.id() + sub;
+	        }
+	    }
+	    return "?"; // orphaned node
+	}
+
+	private static String buildPathFrom(Node node, Node stopAt,
+	                                    String sep, String prefix) {
+	    if (node == stopAt) return prefix.isEmpty() ? sep : prefix + sep;
 	    StringBuilder sb = new StringBuilder();
 	    Node curr = node;
-	    while (curr != null && curr != root) {
+	    while (curr != null && curr != stopAt) {
 	        sb.insert(0, sep + curr.name);
 	        curr = curr.parent;
 	    }
-
 	    return prefix.isEmpty() ? sb.toString() : prefix + sb.toString();
 	}
 
@@ -176,6 +206,28 @@ public class VirtualFileSystem {
 		if (base.isEmpty() && ext.isEmpty()) return "";
 		return ext.isEmpty() ? base : base + "." + ext;
 	}
+	
+	/**
+	 * Attach a volume to the file system.
+	 *
+	 * @param id        the mount identifier: {@code "A:"} on DOS, or
+	 *                  {@code "/mnt/floppy"} on POSIX
+	 * @param rootNode  the root of the mounted tree
+	 * @param readOnly  whether the volume rejects writes
+	 * @param source    a descriptive source, e.g. {@code "floppy bay 0"}
+	 */
+	public void mount(String id, Node rootNode, boolean readOnly, String source) {
+	    mounts.put(id, new Mount(id, rootNode, readOnly, source));
+	}
+
+	/** Remove a mount. The mounted tree is untouched; the caller owns it. */
+	public void unmount(String id) { mounts.remove(id); }
+
+	/** @return the mount with this ID, or {@code null}. */
+	public Mount findMount(String id) { return mounts.get(id); }
+
+	/** @return all current mounts. */
+	public Map<String, Mount> mounts() { return Map.copyOf(mounts); }
 
 	public static class Node {
 		public String name;

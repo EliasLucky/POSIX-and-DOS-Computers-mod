@@ -2,6 +2,7 @@ package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.List;
 
+import com.eliaslucky.mc_dos.api.bios.Bios;
 import com.eliaslucky.mc_dos.blocks.computer.processors.Dos6CommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.LinuxCommandProcessor;
@@ -9,6 +10,7 @@ import com.eliaslucky.mc_dos.blocks.computer.processors.LinuxCommandProcessor;
 public enum ComputerType {
 	IBM_PC_AT(
 		"IBM Personal Computer AT (Model 5170)",
+		"Intel 80286 @ 8 MHz",   
 		"IBM Personal Computer DOS Version 3.30",
 		0xFFFFFF/*0x00FF00*/,
 		List.of(
@@ -40,11 +42,13 @@ public enum ComputerType {
 	            ""
 	        ),
 		new Dos6CommandProcessor(),
-		"C:\\"
+		"C:\\",
+		new IBMATBios()
 	),
 
 	PENTIUM_4_LINUX(
 		"Pentium 4 ACPI BIOS Revision 1008",
+		"Intel(R) Pentium(R) 4 CPU 2.40GHz",
 		"Debian GNU/Linux 3.0 (woody)",
 		0xFFFFFF,
 		List.of("bin/", "etc/", "home/", "var/"),
@@ -80,24 +84,36 @@ public enum ComputerType {
 	            ""
 	        ),
 		new LinuxCommandProcessor(),
-		"/"
+		"/",
+		new AwardBios() 
 	);
 
 	public final String modelName;
-	public final String osVersion;
+	public final String cpuName;
+    public final String osVersion;
 	public final int textColor;
 	public final List<String> defaultFiles;
 	public final List<String> bootSequence;
 	public final ICommandProcessor commandProcessor;
 	public final String defaultPath;
-
-	ComputerType(String modelName, String osVersion, int textColor, List<String> defaultFiles, List<String> bootSequence, ICommandProcessor commandProcessor, String defaultPath) {
+    public final Bios bios;
+    public final List<DriveBaySpec> driveBays;
+    public final boolean hasCdRom;
+    public record DriveBaySpec(
+            DriveType type,
+            String dosLetter,        // "A", "B", or null
+            String posixDevice,      // "/dev/fd0" or "/dev/sr0" or null
+            String posixMountPoint   // "/mnt/floppy" or "/mnt/cdrom" or null
+    ) {}
+	ComputerType(String modelName,String cpuName, String osVersion, int textColor, List<String> defaultFiles, List<String> bootSequence, ICommandProcessor commandProcessor, String defaultPath,Bios bios) {
 		this.modelName = modelName;
-		this.osVersion = osVersion;
+		this.cpuName = cpuName;
+        this.osVersion = osVersion;
 		this.textColor = textColor;
 		this.defaultFiles = defaultFiles;
 		this.bootSequence = bootSequence;
 		this.commandProcessor = commandProcessor;
 		this.defaultPath = defaultPath;
+        this.bios = bios;
 	}
 }
