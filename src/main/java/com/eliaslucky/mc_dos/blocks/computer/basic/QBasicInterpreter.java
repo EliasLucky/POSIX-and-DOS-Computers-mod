@@ -75,8 +75,10 @@ public class QBasicInterpreter {
                 s.execute(ctx, host);
                 
                 // INKEY$ yield point.
-                if (ctx.isYieldRequested()) {
-                    ctx.clearYield();
+                if (ctx.isFrameYieldRequested()) {
+                    ctx.clearFrameYield();
+                    // Advance past the WAIT so we don't re-execute it next frame.
+                    if (ctx.getPc() == before && !s.isTerminal()) ctx.advance();
                     return RunState.RUNNING;
                 }
                 // INPUT just requested

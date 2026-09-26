@@ -397,7 +397,7 @@ record ViewStmt(int line, Expression x1, Expression y1, Expression x2, Expressio
 // WAIT — hardware sync, no-op in the mod
 record WaitStmt(int line) implements Statement {
 	@Override public int line() { return line; }
-	@Override public void execute(ExecutionContext ctx, Host host) { /* no-op */ }
+	@Override public void execute(ExecutionContext ctx, Host host) { ctx.requestFrameYield(); }
 }
 
 // WIDTH — for now, accept and ignore

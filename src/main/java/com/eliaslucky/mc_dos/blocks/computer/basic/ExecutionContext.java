@@ -76,10 +76,10 @@ public final class ExecutionContext {
     public void    requestSleep(long until) { sleepUntilMillis = until; }
     public void    clearSleep()      { sleepUntilMillis = 0; }
     
-    private boolean yieldRequested = false;
-    public void requestYield()   { yieldRequested = true; }
-    public boolean isYieldRequested() { return yieldRequested; }
-    public void clearYield()     { yieldRequested = false; }
+    private boolean frameYieldRequested = false;
+    public void requestFrameYield() { frameYieldRequested = true; }
+    public boolean isFrameYieldRequested() { return frameYieldRequested; }
+    public void clearFrameYield() { frameYieldRequested = false; }
 
     private static String normalize(String name) {
         String n = name.trim().toUpperCase(Locale.ROOT);
