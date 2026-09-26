@@ -62,7 +62,7 @@ public class Tokenizer {
                 pos++; col++;
             }
             return new Token(Token.TokenType.NUMBER,
-                    src.substring(hexStart, pos), line, sc);
+            		"0x" + src.substring(hexStart, pos), line, sc);
         }
         while (pos < src.length()) {
             char c = src.charAt(pos);

@@ -23,7 +23,7 @@ public class AllItems {
 	
 		
 	/* PC STUFF */
-	public static final RegistryObject<Item> WHITE_IBM_PC_AT_COMPUTER = ITEMS.register("white_ibm_pc_at_computer",
+	public static final RegistryObject<Item> WHITE_IBM_PC_AT_COMPUTER = ITEMS.register("white_ibm_pcat_computer",
 			() -> new BlockItem(AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get(), new Item.Properties())
 		);
 

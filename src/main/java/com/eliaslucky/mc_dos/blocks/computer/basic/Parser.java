@@ -420,6 +420,11 @@ public class Parser {
         if (t.isKeyword("FALSE")) { advance(); return new NumberLiteral(0);  }
         if (t.is(Token.TokenType.NUMBER)) {
             advance();
+            String s = t.text();
+            if (s.startsWith("0x")) {
+                return new NumberLiteral((double) Long.parseLong(s.substring(2), 16));
+            }
+            return new NumberLiteral(Double.parseDouble(s));
         }
         if (t.is(Token.TokenType.STRING)) {
             advance(); return new StringLiteral(t.text());
@@ -443,7 +448,10 @@ public class Parser {
                 return new FunctionCall(name, args);
             }
 
-            // Otherwise, a plain variable reference.
+            // Known zero-argument built-ins that don't require parentheses.
+            if (name.equalsIgnoreCase("INKEY$") || name.equalsIgnoreCase("INKEY")) {
+                return new FunctionCall(name, java.util.List.of());
+            }
             return new VariableRef(name);
         }
         if (t.is(Token.TokenType.PUNCT) && t.text().equals("(")) {
