@@ -3,6 +3,7 @@ package com.eliaslucky.mc_dos.client.apps.qbasic;
 import com.eliaslucky.mc_dos.blocks.computer.basic.QBasicInterpreter;
 import com.eliaslucky.mc_dos.blocks.computer.basic.RunState;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
+import com.eliaslucky.mc_dos.client.apps.FileAwareApp;
 import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
 import com.eliaslucky.mc_dos.client.apps.editor.AbstractEditorApplication;
@@ -10,7 +11,7 @@ import com.eliaslucky.mc_dos.client.apps.editor.DialogState;
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
-public class QBasicApplication extends AbstractEditorApplication {
+public class QBasicApplication extends AbstractEditorApplication implements FileAwareApp {
     public enum Mode  { EDITOR, MENU, DIALOG, RUN_OUTPUT,RUNNING }
     public enum Focus { EDIT, IMMEDIATE }
 
@@ -410,7 +411,26 @@ public class QBasicApplication extends AbstractEditorApplication {
     protected boolean modeIsEditor() {
         return mode == Mode.EDITOR;
     }
+    
+    @Override
+    public void onFileWriteResult(String path, boolean success, String message) {
+        if (success) {
+            statusMessage = "Written to " + path;
+            modified = false;
+        } else {
+            showFileError(message);
+        }
+    }
 
+    private void showFileError(String message) {
+        dialog = new DialogState()
+                .addLine("")
+                .addLine(message == null || message.isEmpty() ? "Write error" : message)
+                .addLine("")
+                .addItem("OK", "err.ok")
+                .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
+        mode = Mode.DIALOG;
+    }
     // Run pipeline
     private void startRun() {
         pendingSourceSnapshot = currentSource();

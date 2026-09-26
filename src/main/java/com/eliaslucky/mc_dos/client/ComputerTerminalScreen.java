@@ -166,9 +166,17 @@ public class ComputerTerminalScreen extends Screen {
 	public void saveFile(String path, String content) {
 		ModMessages.sendToServer(new ServerboundFileWritePacket(this.pos, path, content));
 	}
+	/**
+	 * Called by {@link com.eliaslucky.mc_dos.network.ClientboundFileWriteResultPacket}
+	 * when the server finishes processing a save.
+	 *
+	 * @param path    the path that was written
+	 * @param success whether the write succeeded
+	 * @param message error message, empty on success
+	 */
 	public void onFileWriteResult(String path, boolean success, String message) {
-	    if (activeApp instanceof FileAwareApp fwa) {
-	        fwa.onFileWriteResult(path, success, message);
+	    if (activeApp instanceof FileAwareApp fa) {
+	        fa.onFileWriteResult(path, success, message);
 	    }
 	}
 
