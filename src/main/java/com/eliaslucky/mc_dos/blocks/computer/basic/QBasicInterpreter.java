@@ -73,7 +73,12 @@ public class QBasicInterpreter {
                 Statement s = ctx.next();
                 int before = ctx.getPc();
                 s.execute(ctx, host);
-
+                
+                // INKEY$ yield point.
+                if (ctx.isYieldRequested()) {
+                    ctx.clearYield();
+                    return RunState.RUNNING;
+                }
                 // INPUT just requested
                 if (ctx.hasInputRequest()) {
                     return RunState.WAITING_INPUT;   // pc stays put

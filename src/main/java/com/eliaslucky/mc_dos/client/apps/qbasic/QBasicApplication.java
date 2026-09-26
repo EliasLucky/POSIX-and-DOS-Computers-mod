@@ -154,6 +154,12 @@ public class QBasicApplication extends AbstractEditorApplication {
 	                    return true;
 	                }
 	            }
+	            if (host != null) {
+	                String arrow = arrowKeyString(key);
+	                if (arrow != null) {
+	                    host.enqueueKey(arrow);
+	                }
+	            }
 	            return true;
             case RUN_OUTPUT:
                 mode = Mode.EDITOR;
@@ -212,6 +218,23 @@ public class QBasicApplication extends AbstractEditorApplication {
         }
         return false;
     }
+    /**
+     * Maps a GLFW arrow key to the two-character sequence QBasic's
+     * {@code INKEY$} returns for that key: {@code CHR$(0)} followed by a
+     * letter. Programs that read arrow keys test for exactly this shape.
+     *
+     * @param key a {@code GLFW_KEY_*} constant
+     * @return the QBasic keycode, or {@code null} if the key isn't an arrow
+     */
+    private static String arrowKeyString(int key) {
+        return switch (key) {
+            case GLFW.GLFW_KEY_UP    -> "\u0000H";
+            case GLFW.GLFW_KEY_DOWN  -> "\u0000P";
+            case GLFW.GLFW_KEY_LEFT  -> "\u0000K";
+            case GLFW.GLFW_KEY_RIGHT -> "\u0000M";
+            default -> null;
+        };
+    }
 
     @Override
     public boolean keyReleased(int key, int scan, int mods) {
@@ -269,12 +292,12 @@ public class QBasicApplication extends AbstractEditorApplication {
     private void executeImmediateLine(String line) {
         if (line == null || line.isBlank()) return;
 
-        // Collect output as text — do NOT hijack the main display.
+        // Collect output as text - do NOT hijack the main display.
         HeadlessHost headless = new HeadlessHost();
         new QBasicInterpreter(headless).run(line);
         if (headless.hadError()) {
             showSyntaxError(headless.getLastErrorCode(), headless.getLastErrorMessage());
-            // Do NOT clear the buffer — the user can fix and re-run.
+            // Do NOT clear the buffer - the user can fix and re-run.
             return;
         }
 
@@ -344,6 +367,24 @@ public class QBasicApplication extends AbstractEditorApplication {
 
     @Override
     public boolean charTyped(char cp, int mods) {
+    	if (mode == Mode.RUNNING && runState != RunState.WAITING_INPUT && host != null) {
+            if (cp >= 32 && cp != 127) {
+                host.enqueueKey(String.valueOf(cp));
+            }
+            return true;
+        }
+
+        if (mode == Mode.RUNNING && runState == RunState.WAITING_INPUT) {
+            if (cp >= 32 && cp != 127) {
+                inputBuffer.append(cp);
+                host.print(String.valueOf(cp));
+            }
+            return true;
+        }
+    	if (mode == Mode.RUNNING && host != null) {
+            host.enqueueKey(String.valueOf(cp));
+            return true;
+        }
     	if (consumingMenuKeystroke) {
             consumingMenuKeystroke = false;
             return true;
@@ -351,13 +392,6 @@ public class QBasicApplication extends AbstractEditorApplication {
         if (mode == Mode.MENU)       return true;
         if (mode == Mode.DIALOG)     return true;
         if (mode == Mode.RUN_OUTPUT) return true;
-        if (mode == Mode.RUNNING && runState == RunState.WAITING_INPUT) {
-            if (cp >= 32 && cp != 127) {
-                inputBuffer.append(cp);
-                host.print(String.valueOf(cp));    // echo to display
-            }
-            return true;
-        }
 
         if (mode == Mode.EDITOR && focus == Focus.IMMEDIATE) {
             immediate.insert(cp);

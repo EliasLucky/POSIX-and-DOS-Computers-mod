@@ -4,13 +4,17 @@ import java.util.*;
 
 public final class ExecutionContext {
     public record ForFrame(String var, double end, double step, int bodyStartPc) {}
+    public record FnDef(List<String> params, Expression body) {}
+    public record SubDef(List<String> params, List<Statement> body) {}
 
     private final List<Statement> program;
     private final Map<String, Integer> labels = new HashMap<>();
     private final Map<String, Value>   vars   = new HashMap<>();
     private final Deque<ForFrame>      forStack    = new ArrayDeque<>();
     private final Deque<Integer>       returnStack = new ArrayDeque<>();
-
+    private final Map<String, FnDef> fns = new HashMap<>();
+    private final Map<String, SubDef> subs = new HashMap<>();
+    
     private int pc = 0;
     private int printColumn = 0;
     private boolean stopped = false;
@@ -71,6 +75,11 @@ public final class ExecutionContext {
     public long    getSleepUntil()   { return sleepUntilMillis; }
     public void    requestSleep(long until) { sleepUntilMillis = until; }
     public void    clearSleep()      { sleepUntilMillis = 0; }
+    
+    private boolean yieldRequested = false;
+    public void requestYield()   { yieldRequested = true; }
+    public boolean isYieldRequested() { return yieldRequested; }
+    public void clearYield()     { yieldRequested = false; }
 
     private static String normalize(String name) {
         String n = name.trim().toUpperCase(Locale.ROOT);
@@ -81,5 +90,31 @@ public final class ExecutionContext {
             } else break;
         }
         return n;
+    }
+    
+    public void defineFn(String name, List<String> params, Expression body) {
+        fns.put(name.toUpperCase(Locale.ROOT), new FnDef(params, body));
+    }
+    public FnDef getFn(String name) {
+        return fns.get(name.toUpperCase(Locale.ROOT));
+    }
+    public void defineSub(String name, List<String> params, List<Statement> body) {
+        subs.put(name.toUpperCase(Locale.ROOT), new SubDef(params, body));
+    }
+    public void callSub(String name, List<Expression> args, Host host) {
+        SubDef def = subs.get(name.toUpperCase(Locale.ROOT));
+        if (def == null) return;
+
+        // Save current variable values for the parameters, bind the new ones,
+        // run the body, then restore. This is a crude by-value scheme — QBASIC
+        // semantics are by-reference, which we don't yet support.
+        Map<String, Value> saved = new HashMap<>();
+        for (int i = 0; i < def.params().size() && i < args.size(); i++) {
+            String p = def.params().get(i);
+            saved.put(p, getVar(p));
+            setVar(p, args.get(i).eval(this, host));
+        }
+        for (Statement s : def.body()) s.execute(this, host);
+        for (Map.Entry<String, Value> e : saved.entrySet()) setVar(e.getKey(), e.getValue());
     }
 }

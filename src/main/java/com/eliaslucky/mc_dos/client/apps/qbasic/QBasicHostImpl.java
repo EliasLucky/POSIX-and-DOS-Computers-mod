@@ -1,5 +1,8 @@
 package com.eliaslucky.mc_dos.client.apps.qbasic;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import com.eliaslucky.mc_dos.blocks.computer.basic.Host;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.apps.display.*;
@@ -8,6 +11,9 @@ public class QBasicHostImpl implements Host {
     private final TerminalApplication app;
     private int fg = 15;    // current foreground index (white)
     private int bg = 0;
+    private int[] viewport = null;
+    private final Deque<String> keyQueue = new ArrayDeque<>();
+    private static final int MAX_KEY_QUEUE = 64;
 
     public QBasicHostImpl(TerminalApplication app) { this.app = app; }
 
@@ -41,12 +47,18 @@ public class QBasicHostImpl implements Host {
     public void setScreenMode(int mode) {
         switch (mode) {
             case 0  -> app.setDisplayMode(new Screen0Text());
+            case 7  -> app.setDisplayMode(new Screen7EGA());
             case 13 -> app.setDisplayMode(new Screen13VGA());
             default -> { /* unsupported: keep current */ }
         }
     }
 
-    @Override public void setPixel(int x, int y, int c) { app.getDisplayMode().setPixel(x, y, c); }
+    @Override public void setPixel(int x, int y, int c) {
+        if (viewport != null) {
+            if (x < viewport[0] || x > viewport[2] || y < viewport[1] || y > viewport[3]) return;
+        }
+        app.getDisplayMode().setPixel(x, y, c);
+    }
     @Override public void pset(int x, int y, int c)     { setPixel(x, y, c); }
 
     @Override public void drawLine(int x1, int y1, int x2, int y2, int c, int style) {
@@ -116,6 +128,41 @@ public class QBasicHostImpl implements Host {
     public void runtimeError(int code, String msg, int line) {
         printNewline();
         print("Runtime error " + code + " at line " + line + ": " + msg);
+    }
+    @Override
+    public void setViewport(int x1, int y1, int x2, int y2, int borderColor) {
+        // Normalize (QBasic allows either corner first).
+        int vx1 = Math.min(x1, x2), vy1 = Math.min(y1, y2);
+        int vx2 = Math.max(x1, x2), vy2 = Math.max(y1, y2);
+        this.viewport = new int[]{ vx1, vy1, vx2, vy2 };
+
+        if (borderColor >= 0) {
+            // Draw the border rectangle in the border color.
+            for (int x = vx1; x <= vx2; x++) {
+                app.getDisplayMode().setPixel(x, vy1, borderColor);
+                app.getDisplayMode().setPixel(x, vy2, borderColor);
+            }
+            for (int y = vy1; y <= vy2; y++) {
+                app.getDisplayMode().setPixel(vx1, y, borderColor);
+                app.getDisplayMode().setPixel(vx2, y, borderColor);
+            }
+        }
+    }
+    @Override public boolean hasKey() { return !keyQueue.isEmpty(); }
+
+    @Override public String pollKey() {
+        return keyQueue.isEmpty() ? "" : keyQueue.pollFirst();
+    }
+
+    /** Called by the client when a key is typed while a program is running. */
+    public void enqueueKey(String key) { 
+    	if (keyQueue.size() >= MAX_KEY_QUEUE) keyQueue.pollFirst();
+        keyQueue.addLast(key);
+    }
+
+    @Override
+    public void resetViewport() {
+        this.viewport = null;
     }
     
     public void backspaceChar() {

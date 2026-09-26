@@ -83,6 +83,13 @@ record BinaryOp(String op, Expression left, Expression right) implements Express
 record FunctionCall(String name, List<Expression> args) implements Expression {
     @Override
     public Value eval(ExecutionContext ctx, Host host) {
+    	if (name.equalsIgnoreCase("INKEY$") || name.equalsIgnoreCase("INKEY")) {
+    		if (!host.hasKey()) {
+    	        ctx.requestYield();
+    	        return Value.of("");
+    	    }
+    	    return Value.of(host.pollKey());
+        }
         List<Value> vals = new java.util.ArrayList<>(args.size());
         for (Expression e : args) vals.add(e.eval(ctx, host));
         return BuiltinFunctions.call(name, vals);

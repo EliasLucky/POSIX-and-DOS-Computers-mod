@@ -97,6 +97,13 @@ public class Parser {
         if (t.isKeyword("LINE"))   { advance(); return parseLine(line); }
         if (t.isKeyword("CIRCLE")) { advance(); return parseCircle(line); }
         if (t.isKeyword("RANDOMIZE")) { advance(); return parseRandomize(line); }
+        if (t.isKeyword("SELECT")) { advance(); return parseSelect(line); }
+        if (t.isKeyword("VIEW"))   { advance(); return parseView(line); }
+        if (t.isKeyword("WAIT"))   { advance(); skipLine(); return new WaitStmt(line); }
+        if (t.isKeyword("WIDTH"))  { advance(); skipLine(); return new WidthStmt(line); }
+        if (t.isKeyword("DEF"))    { advance(); return parseDefFn(line); }
+        if (t.isKeyword("SUB"))    { advance(); return parseSubDef(line); }
+        if (t.isKeyword("CALL"))   { advance(); return parseCall(line); }
 
         if (t.is(Token.TokenType.IDENT)) return parseAssign(line);
 
@@ -304,7 +311,28 @@ public class Parser {
         return new ColorStmt(line, fg, bg);
     }
     private Statement parseScreen(int line) {
-        return new ScreenStmt(line, parseExpr());
+    	Expression mode = null, color = null, apage = null, vpage = null;
+
+        if (!atEndOfStatement() && !peekIsPunct(",")) {
+            mode = parseExpr();
+        }
+        if (peekIsPunct(",")) {
+            advance();
+            if (!atEndOfStatement() && !peekIsPunct(",")) color = parseExpr();
+        }
+        if (peekIsPunct(",")) {
+            advance();
+            if (!atEndOfStatement() && !peekIsPunct(",")) apage = parseExpr();
+        }
+        if (peekIsPunct(",")) {
+            advance();
+            if (!atEndOfStatement()) vpage = parseExpr();
+        }
+        skipLine();
+        return new ScreenStmt(line, mode, color, apage, vpage);
+    }
+    private boolean peekIsPunct(String s) {
+        return peek().is(Token.TokenType.PUNCT) && peek().text().equals(s);
     }
     private Statement parsePset(int line) {
         expectPunct("(");
@@ -391,7 +419,7 @@ public class Parser {
         if (t.isKeyword("TRUE"))  { advance(); return new NumberLiteral(-1); }
         if (t.isKeyword("FALSE")) { advance(); return new NumberLiteral(0);  }
         if (t.is(Token.TokenType.NUMBER)) {
-            advance(); return new NumberLiteral(Double.parseDouble(t.text()));
+            advance();
         }
         if (t.is(Token.TokenType.STRING)) {
             advance(); return new StringLiteral(t.text());
@@ -554,6 +582,151 @@ public class Parser {
         exitTarget.pc = loopIndex + 1;
 
         doStack.pop();
+    }
+    private Statement parseSelect(int line) {
+        expectKeyword("CASE");
+        Expression subject = parseExpr();
+        skipLine();
+
+        List<SelectStmt.CaseClause> clauses = new ArrayList<>();
+        while (true) {
+            skipNewlines();
+            if (peek().is(Token.TokenType.EOF)) {
+                throw new QBasicRuntimeException(1, line, "SELECT without END SELECT");
+            }
+            if (peek().isKeyword("END")) {
+                advance();
+                if (peek().isKeyword("SELECT")) { advance(); break; }
+                break;
+            }
+            if (!peek().isKeyword("CASE")) {
+                // Unexpected token;
+                advance(); continue;
+            }
+            advance();  // CASE
+
+            List<Expression> values = new ArrayList<>();
+            while (true) {
+                values.add(parseExpr());
+                if (peekIsPunct(",")) { advance(); continue; }
+                break;
+            }
+            skipLine();
+
+            List<Statement> body = new ArrayList<>();
+            while (true) {
+                skipNewlines();
+                if (peek().is(Token.TokenType.EOF)) break;
+                if (peek().isKeyword("CASE")) break;
+                if (peek().isKeyword("END")) {
+                    advance();
+                    if (peek().isKeyword("SELECT")) { advance(); }
+                    clauses.add(new SelectStmt.CaseClause(values, body));
+                    return new SelectStmt(line, subject, clauses);
+                }
+                int subLine = line;
+                if (peek().is(Token.TokenType.NUMBER)) {
+                    try { subLine = (int) Double.parseDouble(peek().text()); } catch (Exception ignored) {}
+                    advance();
+                }
+                parseOneLine(subLine, body);
+            }
+            clauses.add(new SelectStmt.CaseClause(values, body));
+        }
+        return new SelectStmt(line, subject, clauses);
+    }
+    
+    private Statement parseView(int line) {
+        // VIEW [SCREEN] (x1,y1)-(x2,y2) [, fill [, border]]
+        // VIEW   resets to fullscreen
+        if (atEndOfStatement()) {
+            return new ViewStmt(line, null, null, null, null, null, null, true);
+        }
+
+        if (peek().isKeyword("SCREEN")) advance();
+
+        expectPunct("(");
+        Expression x1 = parseExpr();
+        expectPunct(",");
+        Expression y1 = parseExpr();
+        expectPunct(")");
+        expectOp("-");
+        expectPunct("(");
+        Expression x2 = parseExpr();
+        expectPunct(",");
+        Expression y2 = parseExpr();
+        expectPunct(")");
+
+        Expression fill = null, border = null;
+        if (peekIsPunct(",")) {
+            advance();
+            fill = parseExpr();
+            if (peekIsPunct(",")) {
+                advance();
+                border = parseExpr();
+            }
+        }
+        skipLine();
+        return new ViewStmt(line, x1, y1, x2, y2, fill, border, false);
+    }
+    private Statement parseDefFn(int line) {
+        // DEF FNname(a, b, ...) = expression
+        Token nameTok = expect(Token.TokenType.IDENT, "function name");
+        expectPunct("(");
+        List<String> params = new ArrayList<>();
+        if (!peekIsPunct(")")) {
+            params.add(expect(Token.TokenType.IDENT, "parameter").text());
+            while (peekIsPunct(",")) { advance(); params.add(expect(Token.TokenType.IDENT, "parameter").text()); }
+        }
+        expectPunct(")");
+        expectOp("=");
+        Expression body = parseExpr();
+        skipLine();
+        return new DefFnStmt(line, nameTok.text(), params, body);
+    }
+
+    private Statement parseSubDef(int line) {
+        Token nameTok = expect(Token.TokenType.IDENT, "sub name");
+        expectPunct("(");
+        List<String> params = new ArrayList<>();
+        if (!peekIsPunct(")")) {
+            params.add(expect(Token.TokenType.IDENT, "parameter").text());
+            while (peekIsPunct(",")) { advance(); params.add(expect(Token.TokenType.IDENT, "parameter").text()); }
+        }
+        expectPunct(")");
+        skipLine();
+
+        List<Statement> body = new ArrayList<>();
+        while (true) {
+            skipNewlines();
+            if (peek().is(Token.TokenType.EOF)) {
+                throw new QBasicRuntimeException(1, line, "SUB without END SUB");
+            }
+            if (peek().isKeyword("END")) {
+                advance();
+                if (peek().isKeyword("SUB")) { advance(); break; }
+            }
+            int subLine = line;
+            if (peek().is(Token.TokenType.NUMBER)) {
+                try { subLine = (int) Double.parseDouble(peek().text()); } catch (Exception ignored) {}
+                advance();
+            }
+            parseOneLine(subLine, body);
+        }
+        return new SubDefStmt(line, nameTok.text(), params, body);
+    }
+
+    private Statement parseCall(int line) {
+        Token nameTok = expect(Token.TokenType.IDENT, "sub name");
+        expectPunct("(");
+        List<Expression> args = new ArrayList<>();
+        if (!peekIsPunct(")")) {
+            args.add(parseExpr());
+            while (peekIsPunct(",")) { advance(); args.add(parseExpr()); }
+        }
+        expectPunct(")");
+        skipLine();
+        return new CallStmt(line, nameTok.text(), args);
     }
 
     // Token

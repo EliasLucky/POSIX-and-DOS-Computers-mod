@@ -9,7 +9,9 @@ public class Tokenizer {
             "CLS", "REM", "INPUT", "SCREEN", "COLOR", "LOCATE",
             "PSET", "LINE", "CIRCLE", "STOP", "DATA", "READ",
             "AND", "OR", "NOT", "MOD", "DIM", "AS", "SLEEP", "BEEP",
-            "TRUE", "FALSE", "RANDOMIZE", "DO", "LOOP", "WHILE", "UNTIL", "EXIT"
+            "TRUE", "FALSE", "RANDOMIZE", "DO", "LOOP", "WHILE", "UNTIL", "EXIT",
+            "SELECT", "CASE", "IS", "VIEW", "WAIT", "WIDTH",
+            "DEF", "SUB", "CALL", "INKEY"
     );
 
     private final String src;
@@ -28,9 +30,11 @@ public class Tokenizer {
             }
             if (c == ' ' || c == '\t') { pos++; col++; continue; }
             if (c == '\'') { skipLine(); continue; }
+            if (c == '`')  { skipLine(); continue; }
 
             if (Character.isDigit(c)
-                    || (c == '.' && pos + 1 < src.length() && Character.isDigit(src.charAt(pos + 1)))) {
+                    || (c == '.' && pos + 1 < src.length() && Character.isDigit(src.charAt(pos + 1)))
+                || (c == '&' && pos + 1 < src.length() && (src.charAt(pos + 1) == 'H' || src.charAt(pos + 1) == 'h'))) {
                 out.add(readNumber()); continue;
             }
             if (Character.isLetter(c) || c == '_') { out.add(readWord()); continue; }
@@ -49,12 +53,26 @@ public class Tokenizer {
 
     private Token readNumber() {
         int start = pos, sc = col;
+        // Hex: &H followed by hex digits
+        if (src.charAt(pos) == '&' && pos + 1 < src.length()
+                && (src.charAt(pos + 1) == 'H' || src.charAt(pos + 1) == 'h')) {
+            pos += 2; col += 2;
+            int hexStart = pos;
+            while (pos < src.length() && isHexDigit(src.charAt(pos))) {
+                pos++; col++;
+            }
+            return new Token(Token.TokenType.NUMBER,
+                    src.substring(hexStart, pos), line, sc);
+        }
         while (pos < src.length()) {
             char c = src.charAt(pos);
             if (Character.isDigit(c) || c == '.' || c == 'E' || c == 'e') { pos++; col++; }
             else break;
         }
         return new Token(Token.TokenType.NUMBER, src.substring(start, pos), line, sc);
+    }
+    private static boolean isHexDigit(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
     }
 
     private Token readWord() {
