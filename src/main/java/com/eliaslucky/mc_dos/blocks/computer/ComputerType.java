@@ -44,6 +44,9 @@ public enum ComputerType {
 		new Dos6CommandProcessor(),
 		"C:\\",
 		new IBMATBios()
+		List.of(
+			    new DriveBaySpec(DriveType.FDD_1_2M,  "A", "/dev/fd0", "/mnt/floppy"),
+			    new DriveBaySpec(DriveType.FDD_1_44M, "B", "/dev/fd1", "/mnt/floppy2"))
 	),
 
 	PENTIUM_4_LINUX(
@@ -85,7 +88,10 @@ public enum ComputerType {
 	        ),
 		new LinuxCommandProcessor(),
 		"/",
-		new AwardBios() 
+		new AwardBios()
+		List.of(
+			    new DriveBaySpec(DriveType.FDD_1_44M, "A", "/dev/fd0", "/mnt/floppy"),
+			    new DriveBaySpec(DriveType.DVD_RW,    "D", "/dev/sr0", "/mnt/cdrom"))
 	);
 
 	public final String modelName;

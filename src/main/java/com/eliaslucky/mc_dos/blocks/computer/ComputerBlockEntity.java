@@ -29,6 +29,8 @@ public class ComputerBlockEntity extends BlockEntity {
 
 	private final Map<String, String> environment = new HashMap<>();
 	private Kernel kernel;
+	private final List<DriveBay> driveBays = new ArrayList<>();
+	public List<DriveBay> driveBays() { return List.copyOf(driveBays); }
 
 	public ComputerBlockEntity(BlockPos pos, BlockState state) {
 		super(AllBlockEntities.COMPUTER_PROGRAMMABLE_BLOCK.get(), pos, state);
@@ -121,13 +123,6 @@ public class ComputerBlockEntity extends BlockEntity {
 	    }
 
 	    vfs.setCurrentPath(computerType.defaultPath);
-		/*fileSystem.setCurrentPath(computerType.defaultPath);
-		for (String filePath : computerType.defaultFiles) {
-			boolean isDir = filePath.endsWith("/") || filePath.endsWith("\\");
-			String cleanName = filePath.replaceAll("[/\\\\]", "");
-			VirtualFileSystem.Node child = new VirtualFileSystem.Node(cleanName, isDir);
-			fileSystem.getCurrentDir().addChild(child);
-		}*/
 	}
 
 	private void setupEnvironment() {
@@ -136,6 +131,91 @@ public class ComputerBlockEntity extends BlockEntity {
 		environment.put("PATH", computerType.commandProcessor.defaultPath());
 		environment.put("PROMPT", "$P$G");
 }
+	public DriveBay driveBay(int index) {
+	    return (index >= 0 && index < driveBays.size()) ? driveBays.get(index) : null;
+	}
+
+	private void setupDriveBays() {
+	    driveBays.clear();
+	    for (int i = 0; i < computerType.driveBays.size(); i++) {
+	        DriveBaySpec spec = computerType.driveBays.get(i);
+	        driveBays.add(new DriveBay(i, spec.type(),
+	                spec.dosLetter(), spec.posixDevice(), spec.posixMountPoint()));
+	    }
+	}
+	/**
+	 * Try to insert a removable media item into the first compatible,
+	 * empty bay.
+	 *
+	 * @param stack  the stack being inserted (mutated: shrunk by 1)
+	 * @param player the inserting player
+	 * @return {@code true} if a bay accepted the media
+	 */
+	public boolean tryInsertMedia(ItemStack stack, Player player) {
+	    if (!(stack.getItem() instanceof RemovableMediaItem rmi)) return false;
+
+	    for (DriveBay bay : driveBays) {
+	        if (bay.hasMedia()) continue;
+	        if (!bay.type().canRead(rmi.media())) continue;
+
+	        VirtualFileSystem.Node root = rmi.readRoot(stack);
+	        if (!bay.insert(stack, root)) continue;
+
+	        // Mount into the VFS under the bay's identifiers.
+	        if (bay.dosLetter() != null) {
+	            fileSystem.mount(bay.dosLetter() + ":", root,
+	                    !rmi.writable(), "floppy bay " + bay.index());
+	        }
+	        if (bay.posixMountPoint() != null && bay.isPosixMounted()) {
+	            fileSystem.mount(bay.posixMountPoint(), root,
+	                    !rmi.writable(), "floppy bay " + bay.index());
+	        }
+
+	        stack.shrink(1);
+	        setChanged();
+	        return true;
+	    }
+	    return false;
+	}
+
+	/**
+	 * Eject the media from the given bay, dropping it into the world or
+	 * returning it to the player.
+	 *
+	 * @param bayIndex the bay to eject from
+	 * @param player   the player performing the eject
+	 * @return {@code true} if media was ejected
+	 */
+	public boolean tryEjectMedia(int bayIndex, Player player) {
+	    DriveBay bay = driveBay(bayIndex);
+	    if (bay == null || !bay.hasMedia()) return false;
+
+	    // Save the current tree back into the item before ejecting.
+	    if (bay.insertedStack().getItem() instanceof RemovableMediaItem rmi) {
+	        rmi.writeRoot(bay.insertedStack(), bay.mountedRoot());
+	    }
+
+	    // Unmount.
+	    if (bay.dosLetter() != null) {
+	        fileSystem.unmount(bay.dosLetter() + ":");
+	    }
+	    if (bay.posixMountPoint() != null) {
+	        fileSystem.unmount(bay.posixMountPoint());
+	    }
+
+	    ItemStack ejected = bay.eject();
+	    if (!ejected.isEmpty()) {
+	        if (!player.getInventory().add(ejected)) {
+	            player.drop(ejected, false);
+	        }
+	    }
+	    setChanged();
+	    return true;
+	}
+	public boolean hasInsertedMedia() {
+	    for (DriveBay bay : driveBays) if (bay.hasMedia()) return true;
+	    return false;
+	}
 	
 	public String executeLine(String rawLine) {
 	    ICommandProcessor proc = computerType.commandProcessor;
@@ -175,6 +255,13 @@ public class ComputerBlockEntity extends BlockEntity {
 		CompoundTag envTag = new CompoundTag();
 		environment.forEach(envTag::putString);
 		tag.put("Environment", envTag);
+		ListTag baysTag = new ListTag();
+	    for (DriveBay bay : driveBays) {
+	        CompoundTag bayTag = new CompoundTag();
+	        bay.save(bayTag);
+	        baysTag.add(bayTag);
+	    }
+	    tag.put("DriveBays", baysTag);
 	}
 
 	@Override
@@ -197,6 +284,17 @@ public class ComputerBlockEntity extends BlockEntity {
 			CompoundTag envTag = tag.getCompound("Environment");
 			for (String k : envTag.getAllKeys()) environment.put(k, envTag.getString(k));
 		}
+		if (tag.contains("DriveBays")) {
+	        ListTag baysTag = tag.getList("DriveBays", Tag.TAG_COMPOUND);
+	        // Drive bays were created by setupDriveBays; overlay their saved state.
+	        // If the count differs (computer type changed), rebuild.
+	        if (baysTag.size() != driveBays.size()) {
+	            setupDriveBays();
+	        }
+	        for (int i = 0; i < Math.min(baysTag.size(), driveBays.size()); i++) {
+	            driveBays.get(i).load(baysTag.getCompound(i));
+	        }
+	    }
 	}
 
 	private UUID activeUser = null;

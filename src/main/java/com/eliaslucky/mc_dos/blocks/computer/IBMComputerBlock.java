@@ -53,6 +53,40 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 	public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
 		BlockEntity be = level.getBlockEntity(pos);
 		if (be instanceof ComputerBlockEntity computerBE) {
+			ItemStack held = player.getItemInHand(hand);
+		    boolean sneaking = player.isShiftKeyDown();
+
+		    // Insert
+		    if (sneaking && !held.isEmpty() &&
+		            held.getItem() instanceof RemovableMediaItem) {
+		        if (!level.isClientSide()) {
+		            if (computerBE.tryInsertMedia(held, player)) {
+		                player.displayClientMessage(
+		                        Component.literal("Disk inserted."), true);
+		            } else {
+		                player.displayClientMessage(
+		                        Component.literal("No compatible empty bay."), true);
+		            }
+		        }
+		        return InteractionResult.sidedSuccess(level.isClientSide());
+		    }
+
+		    // Eject
+		    if (sneaking && held.isEmpty() && computerBE.hasInsertedMedia()) {
+		        if (!level.isClientSide()) {
+		            // Eject from the first bay that has media.
+		            for (DriveBay bay : computerBE.driveBays()) {
+		                if (bay.hasMedia()) {
+		                    computerBE.tryEjectMedia(bay.index(), player);
+		                    player.displayClientMessage(
+		                            Component.literal("Disk ejected."), true);
+		                    break;
+		                }
+		            }
+		        }
+		        return InteractionResult.sidedSuccess(level.isClientSide());
+		    }
+		    // Terminal
 			computerBE.setComputerType(this.computerType);
 
 			if (!computerBE.tryOccupy(player)) {
