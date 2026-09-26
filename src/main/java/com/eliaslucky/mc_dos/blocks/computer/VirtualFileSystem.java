@@ -46,13 +46,21 @@ public class VirtualFileSystem {
 	public Node getRoot() { return root; }
 	public Node getCurrentDir() { return currentDir; }
 	public String getCurrentPath() { return currentPath; }
-	public void setCurrentPath(String path) {
+	/**
+	 * Change the current directory.
+	 *
+	 * @param path the target path
+	 * @return {@code true} if the path resolved to a directory and the
+	 *         working directory was updated; {@code false} otherwise
+	 */
+	public boolean setCurrentPath(String path) {
 		Node resolved = resolvePath(path);
 		if (resolved == null || !resolved.isDirectory) {
-	        return;
+	        return false;
 	    }
 	    this.currentDir  = resolved;
 	    this.currentPath = getAbsolutePath(resolved);
+	    return true;
 	}
 
 	public Node resolvePath(String path) {
