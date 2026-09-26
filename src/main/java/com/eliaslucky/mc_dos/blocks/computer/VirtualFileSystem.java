@@ -16,7 +16,13 @@ public class VirtualFileSystem {
 	private final Node root;
 	private Node currentDir;
 	private String currentPath = "/";
+	public record MountPoint(String id, Node rootNode, boolean removable) {}
 
+    public void mount(String id, Node rootNode, boolean removable) { ... }
+    public void unmount(String id) { ... }
+    public boolean isMounted(String id) { ... }
+    public MountPoint findMount(String id) { ... }
+    
 	/** Default to POSIX until an OS is bound. */
 	public VirtualFileSystem() {
 		this(PosixFileNamePolicy.INSTANCE);

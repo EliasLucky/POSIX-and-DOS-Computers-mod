@@ -13,4 +13,8 @@ public class AllBlockEntities {
 	public static final RegistryObject<BlockEntityType<ComputerBlockEntity>> COMPUTER_PROGRAMMABLE_BLOCK = BLOCK_ENTITIES.register("computer_programmable_block",
 		() -> BlockEntityType.Builder.of(ComputerBlockEntity::new, AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()).build(null)
 	);
+	
+	public static final RegistryObject<BlockEntityType<ComputerBlockEntity>> COMPUTER_PROGRAMMABLE_BLOCK = BLOCK_ENTITIES.register("computer_programmable_block",
+			() -> BlockEntityType.Builder.of(ComputerBlockEntity::new, AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()).build(null)
+		);
 }
