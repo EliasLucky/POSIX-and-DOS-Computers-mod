@@ -166,6 +166,11 @@ public class ComputerTerminalScreen extends Screen {
 	public void saveFile(String path, String content) {
 		ModMessages.sendToServer(new ServerboundFileWritePacket(this.pos, path, content));
 	}
+	public void onFileWriteResult(String path, boolean success, String message) {
+	    if (activeApp instanceof FileAwareApp fwa) {
+	        fwa.onFileWriteResult(path, success, message);
+	    }
+	}
 
 	private void executeCommand(String cmd) {
 		if (cmd.isEmpty()) return;

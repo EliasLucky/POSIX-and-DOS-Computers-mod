@@ -7,6 +7,7 @@ import com.eliaslucky.mc_dos.api.shell.StreamResolver;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileOpResult;
 import com.eliaslucky.mc_dos.blocks.computer.fs.PosixFileNamePolicy;
 import com.eliaslucky.mc_dos.blocks.computer.kernel.unix.UnixV7Kernel;
 import com.eliaslucky.mc_dos.blocks.computer.processors.posix.ShellRunner;
@@ -43,8 +44,7 @@ public class UnixV7CommandProcessor implements ICommandProcessor {
     }
 
     @Override
-    public String processWithStdin(ComputerBlockEntity computer,
-                                   String rawInput, String stdin) {
+    public String processWithStdin(ComputerBlockEntity computer, String rawInput, String stdin) {
         VirtualFileSystem vfs = computer.getFileSystem();
         String input = rawInput.trim();
         if (input.isEmpty()) return "";
@@ -90,7 +90,7 @@ public class UnixV7CommandProcessor implements ICommandProcessor {
         return cmd + ": not found";
     }
 
-    //── External resolution (PATH + shebang)
+    // External resolution (PATH + shebang)
     private String tryLaunchExternal(ComputerBlockEntity computer, VirtualFileSystem vfs, String name, String args, String stdin) {
         String path = computer.getEnvironment().getOrDefault("PATH", defaultPath());
 
@@ -161,49 +161,42 @@ public class UnixV7CommandProcessor implements ICommandProcessor {
 
     private String doMkdir(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         if (arg.isEmpty()) return "mkdir: arg count";
-        String canonical = vfs.canonicalize(arg);
-        if (canonical.isEmpty()) return "mkdir: bad name";
-        if (vfs.getCurrentDir().children.containsKey(canonical)) return "mkdir: " + arg + ": File exists";
-        vfs.getCurrentDir().addChild(new VirtualFileSystem.Node(canonical, true));
+        FileOpResult r = vfs.createDirectory(arg);
+        if (!r.success()) return "mkdir: " + r.messageFor("posix") + ": " + arg;
         c.setChanged();
         return "";
     }
 
     private String doRmdir(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         if (arg.isEmpty()) return "rmdir: arg count";
-        VirtualFileSystem.Node target = vfs.resolvePath(arg);
-        if (target == null || !target.isDirectory) return "rmdir: " + arg + ": No such directory";
-        if (!target.children.isEmpty()) return "rmdir: " + arg + ": Directory not empty";
-        if (target.parent != null) { target.parent.children.remove(target.name); c.setChanged(); }
+        FileOpResult r = vfs.removeDirectory(arg);
+        if (!r.success()) return "rmdir: " + r.messageFor("posix") + ": " + arg;
+        c.setChanged();
         return "";
     }
 
     private String doRm(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         if (arg.isEmpty()) return "rm: arg count";
-        VirtualFileSystem.Node target = vfs.resolvePath(arg);
-        if (target == null) return "rm: " + arg + ": No such file";
-        if (target.isDirectory) return "rm: " + arg + ": is a directory";
-        if (target.parent != null) { target.parent.children.remove(target.name); c.setChanged(); }
+        FileOpResult r = vfs.deleteFile(arg);
+        if (!r.success()) return "rm: " + r.messageFor("posix") + ": " + arg;
+        c.setChanged();
         return "";
     }
 
     private String doCp(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         String[] parts = arg.split("\\s+");
         if (parts.length != 2) return "cp: arg count";
+
         VirtualFileSystem.Node src = vfs.resolvePath(parts[0]);
         if (src == null || src.isDirectory) return "cp: can't open " + parts[0];
-        String destName = vfs.canonicalize(parts[1]);
-        if (destName.isEmpty()) return "cp: bad name";
-        VirtualFileSystem.Node dest = vfs.resolvePath(parts[1]);
-        if (dest != null && dest.isDirectory) {
-            VirtualFileSystem.Node copy = new VirtualFileSystem.Node(src.name, false);
-            copy.content = src.content;
-            dest.addChild(copy);
-        } else {
-            VirtualFileSystem.Node copy = new VirtualFileSystem.Node(destName, false);
-            copy.content = src.content;
-            vfs.getCurrentDir().addChild(copy);
-        }
+
+        VirtualFileSystem.Node destNode = vfs.resolvePath(parts[1]);
+        String actualDest = (destNode != null && destNode.isDirectory)
+                ? parts[1] + "/" + src.name
+                : parts[1];
+
+        FileOpResult r = vfs.copyFile(parts[0], actualDest);
+        if (!r.success()) return "cp: " + r.messageFor("posix") + ": " + actualDest;
         c.setChanged();
         return "";
     }
@@ -211,13 +204,8 @@ public class UnixV7CommandProcessor implements ICommandProcessor {
     private String doMv(VirtualFileSystem vfs, ComputerBlockEntity c, String arg) {
         String[] parts = arg.split("\\s+");
         if (parts.length != 2) return "mv: arg count";
-        VirtualFileSystem.Node src = vfs.resolvePath(parts[0]);
-        if (src == null) return "mv: can't open " + parts[0];
-        String newName = vfs.canonicalize(parts[1]);
-        if (newName.isEmpty()) return "mv: bad name";
-        if (src.parent != null) src.parent.children.remove(src.name);
-        src.name = newName;
-        vfs.getCurrentDir().addChild(src);
+        FileOpResult r = vfs.renameFile(parts[0], parts[1]);
+        if (!r.success()) return "mv: " + r.messageFor("posix") + ": " + parts[0];
         c.setChanged();
         return "";
     }
@@ -233,7 +221,7 @@ public class UnixV7CommandProcessor implements ICommandProcessor {
             c.setChanged();
             return "";
         }
-        return "";   // silently accept other modes
+        return "";   // accept other modes
     }
 
     private String doGrep(String stdin, String arg) {

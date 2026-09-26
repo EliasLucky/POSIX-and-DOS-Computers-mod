@@ -2,6 +2,7 @@ package com.eliaslucky.mc_dos.network;
 
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileOpResult;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -53,34 +54,15 @@ public class ServerboundFileWritePacket {
                 return;
             }
 
-            VirtualFileSystem vfs = computer.getFileSystem();
-            VirtualFileSystem.Node node = vfs.resolvePath(this.path);
+            FileOpResult result = computer.getFileSystem().writeFile(path, content);
+            if (result.success()) computer.setChanged();
 
-            if (node == null) {
-                // Create the file in the current directory (mirrors how QBASIC "New" works).
-                String cleanPath = this.path.replace('/', '\\');
-                int lastSlash = cleanPath.lastIndexOf('\\');
-                String name = (lastSlash == -1) ? cleanPath : cleanPath.substring(lastSlash + 1);
-                name = computer.getFileSystem().canonicalize(name);
-                if (name.isEmpty()) return;
+            String osFamily = computer.getComputerType().commandProcessor.osFamily();
+            String message = result.success() ? "" : result.messageFor(osFamily);
 
-                VirtualFileSystem.Node parent = vfs.getCurrentDir();
-                if (lastSlash != -1) {
-                    String parentPath = cleanPath.substring(0, lastSlash);
-                    if (!parentPath.isEmpty()) {
-                        parent = vfs.resolvePath(parentPath);
-                    }
-                }
-                if (parent == null || !parent.isDirectory) return;
-
-                node = new VirtualFileSystem.Node(name, false);
-                parent.addChild(node);
-            }
-
-            if (node.isDirectory) return;
-
-            node.content = this.content;
-            computer.setChanged();
+            ModMessages.sendToPlayer(
+                    new ClientboundFileWriteResultPacket(pos, path, result.success(), message),
+                    player);
         });
         ctx.setPacketHandled(true);
     }

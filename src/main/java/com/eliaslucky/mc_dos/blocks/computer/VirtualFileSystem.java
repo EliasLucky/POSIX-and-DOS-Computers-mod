@@ -9,7 +9,10 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileError;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileNamePolicy;
+import com.eliaslucky.mc_dos.blocks.computer.fs.FileOpResult;
+import com.eliaslucky.mc_dos.blocks.computer.fs.Mount;
 import com.eliaslucky.mc_dos.blocks.computer.fs.PosixFileNamePolicy;
 
 public class VirtualFileSystem {
@@ -17,8 +20,6 @@ public class VirtualFileSystem {
 	private final Node root;
 	private Node currentDir;
 	private String currentPath = "/";
-	/** A mounted volume. */
-	public record Mount(String id, Node rootNode, boolean readOnly, String source) {}
 
 	private final Map<String, Mount> mounts = new LinkedHashMap<>();
 	
@@ -36,12 +37,12 @@ public class VirtualFileSystem {
 	public FileNamePolicy getPolicy()		   { return policy; }
 	public void setPolicy(FileNamePolicy p)    { this.policy = p; }
 	public String canonicalize(String rawName) { return policy.canonicalize(rawName); }
-	public Node newFile(String rawName) {
-		return new Node(policy.canonicalize(rawName), false);
-	}
-	public Node newDirectory(String rawName) {
-		return new Node(policy.canonicalize(rawName), true);
-	}
+	//public Node newFile(String rawName) {
+	//	return new Node(policy.canonicalize(rawName), false);
+	//}
+	//public Node newDirectory(String rawName) {
+	//	return new Node(policy.canonicalize(rawName), true);
+	//}
 	public Node getRoot() { return root; }
 	public Node getCurrentDir() { return currentDir; }
 	public String getCurrentPath() { return currentPath; }
@@ -89,7 +90,7 @@ public class VirtualFileSystem {
 	}
 
 	/** Walk a path string from a starting node. */
-	private static Node resolveFrom(Node start, String path) {
+	private static Node resolveFrom(Node start, String path, FileNamePolicy policy) {
 	    if (path.isEmpty() || path.equals("/")) return start;
 	    String p = path.startsWith("/") ? path.substring(1) : path;
 
@@ -100,7 +101,7 @@ public class VirtualFileSystem {
 	            if (current.parent != null) current = current.parent;
 	            continue;
 	        }
-	        Node child = current.children.get(segment);
+	        Node child = current.children.get(policy.lookupKey(segment));
 	        if (child == null) return null;
 	        current = child;
 	    }
@@ -129,8 +130,7 @@ public class VirtualFileSystem {
 	    return "?"; // orphaned node
 	}
 
-	private static String buildPathFrom(Node node, Node stopAt,
-	                                    String sep, String prefix) {
+	private static String buildPathFrom(Node node, Node stopAt, String sep, String prefix) {
 	    if (node == stopAt) return prefix.isEmpty() ? sep : prefix + sep;
 	    StringBuilder sb = new StringBuilder();
 	    Node curr = node;
@@ -140,7 +140,155 @@ public class VirtualFileSystem {
 	    }
 	    return prefix.isEmpty() ? sb.toString() : prefix + sb.toString();
 	}
+	/**
+	 * Write content to a file, creating it if necessary.
+	 * Updates mount usage accounting.
+	 *
+	 * @param path    path to the file
+	 * @param content the new content
+	 * @return an ok result, or a failure describing why
+	 */
+	public FileOpResult writeFile(String path, String content) {
+	    Node node = resolvePath(path);
+	    boolean create = (node == null);
 
+	    Node parent;
+	    String name;
+	    if (create) {
+	        int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+	        if (slash < 0) { parent = currentDir; name = path; }
+	        else {
+	            String parentPath = path.substring(0, slash);
+	            name = path.substring(slash + 1);
+	            parent = parentPath.isEmpty() ? root : resolvePath(parentPath);
+	        }
+	        if (parent == null || !parent.isDirectory)
+	            return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, path);
+	        name = canonicalize(name);
+	        if (name.isEmpty())
+	            return FileOpResult.fail(FileError.INVALID_NAME, path);
+	    } else {
+	        if (node.isDirectory)
+	            return FileOpResult.fail(FileError.ACCESS_DENIED, path);
+	        parent = node.parent;
+	        name = node.name;
+	    }
+
+	    Mount mount = findMountFor(parent);
+	    if (mount != null) {
+	        FileOpResult check = mount.checkWrite(name, content.length());
+	        if (!check.success()) return check;
+	    }
+
+	    if (create) {
+	        Node fresh = new Node(name, false);
+	        fresh.content = content;
+	        parent.addChild(fresh);
+	        if (mount != null) mount.usage().addEntry(content.length());
+	    } else {
+	    	long delta = (long) content.length() - node.content.length();
+	        node.content = content;
+	        node.modifiedTime = System.currentTimeMillis();
+	        if (mount != null)
+	            mount.usage().changeSize(delta);
+	    }
+	    return FileOpResult.ok();
+	}
+
+	public FileOpResult createDirectory(String path) {
+	    Node existing = resolvePath(path);
+	    if (existing != null)
+	        return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, path);
+
+	    int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+	    Node parent;
+	    String name;
+	    if (slash < 0) { parent = currentDir; name = path; }
+	    else {
+	        String parentPath = path.substring(0, slash);
+	        name = path.substring(slash + 1);
+	        parent = parentPath.isEmpty() ? root : resolvePath(parentPath);
+	    }
+	    if (parent == null || !parent.isDirectory)
+	        return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, path);
+	    name = canonicalize(name);
+	    if (name.isEmpty())
+	        return FileOpResult.fail(FileError.INVALID_NAME, path);
+
+	    Mount mount = findMountFor(parent);
+	    if (mount != null) {
+	        FileOpResult check = mount.checkWrite(name, 0);
+	        if (!check.success()) return check;
+	    }
+
+	    parent.addChild(new Node(name, true));
+	    if (mount != null) mount.usage().addEntry(0);
+	    return FileOpResult.ok();
+	}
+
+	public FileOpResult deleteFile(String path) {
+	    Node node = resolvePath(path);
+	    if (node == null)
+	        return FileOpResult.fail(FileError.FILE_NOT_FOUND, path);
+	    if (node.isDirectory)
+	        return FileOpResult.fail(FileError.ACCESS_DENIED, path);
+	    if (node.parent == null)
+	        return FileOpResult.fail(FileError.ACCESS_DENIED, path);
+
+	    Mount mount = findMountFor(node.parent);
+	    if (mount != null && mount.readOnly())
+	        return FileOpResult.fail(FileError.WRITE_PROTECTED, path);
+
+	    int bytes = node.content.length();
+	    node.parent.children.remove(node.name);
+	    if (mount != null) mount.usage().removeEntry(bytes);
+	    return FileOpResult.ok();
+	}
+
+	public FileOpResult removeDirectory(String path) {
+	    Node node = resolvePath(path);
+	    if (node == null || !node.isDirectory)
+	        return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, path);
+	    if (node == root) return FileOpResult.fail(FileError.ACCESS_DENIED, path);
+	    if (!node.children.isEmpty())
+	        return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, "not empty: " + path);
+
+	    Mount mount = findMountFor(node.parent);
+	    if (mount != null && mount.readOnly())
+	        return FileOpResult.fail(FileError.WRITE_PROTECTED, path);
+
+	    node.parent.children.remove(node.name);
+	    if (mount != null) mount.usage().removeEntry(0);
+	    return FileOpResult.ok();
+	}
+
+	public FileOpResult renameFile(String from, String to) {
+	    Node src = resolvePath(from);
+	    if (src == null) return FileOpResult.fail(FileError.FILE_NOT_FOUND, from);
+	    if (src.parent == null) return FileOpResult.fail(FileError.ACCESS_DENIED, from);
+
+	    String newName = canonicalize(to);
+	    if (newName.isEmpty()) return FileOpResult.fail(FileError.INVALID_NAME, to);
+	    if (src.parent.children.containsKey(newName))
+	        return FileOpResult.fail(FileError.DIRECTORY_PROBLEM, to);
+
+	    Mount mount = findMountFor(src.parent);
+	    if (mount != null && mount.readOnly())
+	        return FileOpResult.fail(FileError.WRITE_PROTECTED, from);
+
+	    src.parent.children.remove(src.name);
+	    src.name = newName;
+	    src.parent.children.put(newName, src);
+	    return FileOpResult.ok();
+	}
+
+	public FileOpResult copyFile(String from, String to) {
+	    Node src = resolvePath(from);
+	    if (src == null || src.isDirectory)
+	        return FileOpResult.fail(FileError.FILE_NOT_FOUND, from);
+
+	    return writeFile(to, src.content);
+	}
 	public CompoundTag serializeNBT() {
 		CompoundTag tag = new CompoundTag();
 		tag.put("Root", root.save());
@@ -216,15 +364,24 @@ public class VirtualFileSystem {
 	 * @param readOnly  whether the volume rejects writes
 	 * @param source    a descriptive source, e.g. {@code "floppy bay 0"}
 	 */
-	public void mount(String id, Node rootNode, boolean readOnly, String source) {
-	    mounts.put(id, new Mount(id, rootNode, readOnly, source));
-	}
+	public Mount mount(String id, Node rootNode, boolean readOnly, String source, long capacityBytes, int maxEntries) {
+Mount m = new Mount(id, rootNode, readOnly, source, capacityBytes, maxEntries);
+mounts.put(id, m);
+return m;
+}
 
 	/** Remove a mount. The mounted tree is untouched; the caller owns it. */
 	public void unmount(String id) { mounts.remove(id); }
 
 	/** @return the mount with this ID, or {@code null}. */
 	public Mount findMount(String id) { return mounts.get(id); }
+	public Mount findMountFor(VirtualFileSystem.Node node) {
+	    // walk up to topmost ancestor, match against mount roots
+	    VirtualFileSystem.Node top = node;
+	    while (top != null && top.parent != null) top = top.parent;
+	    for (Mount m : mounts.values()) if (m.rootNode() == top) return m;
+	    return null;
+	}
 
 	/** @return all current mounts. */
 	public Map<String, Mount> mounts() { return Map.copyOf(mounts); }
