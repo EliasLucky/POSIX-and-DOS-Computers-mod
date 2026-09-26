@@ -4,7 +4,9 @@ import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 import com.eliaslucky.mc_dos.client.apps.display.DisplayMode;
 import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 /**
  * A client-side TUI program. Subclass this to create a full-screen
@@ -66,6 +68,44 @@ public abstract class TerminalApplication {
 
     public void setDisplayMode(DisplayMode mode) { this.displayMode = mode; }
     public DisplayMode getDisplayMode()          { return displayMode; }
+    /**
+     * Draw a string on the character grid.
+     *
+     * <p>Each glyph is drawn at its own 8-pixel offset rather than
+     * letting the vanilla font advance by its own metric. This matters
+     * because every TUI widget — boxes, tables, menus, dialogs — places
+     * things at integer cell positions. If a single string is drawn in
+     * one call, spaces and punctuation shift subsequent glyphs by a
+     * fraction of a pixel each and by the right edge of a 60-column
+     * widget the misalignment is a full cell.
+     *
+     * <p>Spaces are skipped: they cost nothing to draw and their advance
+     * is implicit in the {@code x + i * CELL_W} math below.
+     *
+     * <p>Coordinates are in pixels. Widgets translate from cell
+     * coordinates using {@link #CELL_W} and {@link #CELL_H} before
+     * calling.
+     *
+     * @param g     the graphics context
+     * @param text  the string to draw; {@code null} or empty is a no-op
+     * @param x     left edge in pixels
+     * @param y     top edge in pixels
+     * @param color the ARGB color
+     */
+    public void drawDos(GuiGraphics g, String text, int x, int y, int color) {
+        if (text == null || text.isEmpty()) return;
+        var mcFont = Minecraft.getInstance().font;
+        var style  = screen.getDosStyle();
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == ' ') continue;
+            g.drawString(mcFont,
+                Component.literal(String.valueOf(c)).withStyle(style),
+                x + i * CELL_W, y,
+                color, false);
+        }
+    }
 
     protected void onResize() {}
     public abstract void render(GuiGraphics g, int mouseX, int mouseY, float partialTick);

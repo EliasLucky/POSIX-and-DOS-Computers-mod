@@ -21,7 +21,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     private final StringBuilder inputBuffer = new StringBuilder();
 
     // Regions
-    private final MenuBar       menuBar   = new MenuBar(QBasicMenus.ROOT);
+    private final TuiMenu       menuBar;
     private final ImmediatePane immediate = new ImmediatePane();
 
     // Interpreter (built on each F5 run)
@@ -39,9 +39,12 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         super(screen,
               args.length > 0 && !args[0].isEmpty() ? args[0] : "Untitled",
               initialContent);
-
+        
+        this.menuBar = new TuiMenu(0, QBasicMenus.ROOT_TUI);
+        this.menuBar.onAction(this::invokeMenuAction);
+        
         if (initialContent == null || initialContent.isEmpty()) {
-            this.dialog = DialogState.welcome().onClosed(() -> this.dialog = null);
+        	showWelcomeDialog();
             this.mode   = Mode.DIALOG;
         }
     }
@@ -75,8 +78,14 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     	    return;
     	}
 
-        super.render(g, mouseX, mouseY, partialTick);
-        if (mode == Mode.MENU) menuBar.render(g, this, appWidth);
+    	g.fill(0, 0, appWidth, appHeight, theme.screenBg());
+        renderMenuBar(g);
+        renderHeader(g);
+        renderEditorPane(g);
+        renderImmediateArea(g);
+        renderDivider(g);
+        renderFooter(g);
+        overlay.render(g, this);
     }
     
     @Override
@@ -102,15 +111,13 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
     @Override
     protected void renderMenuBar(GuiGraphics g) {
-        g.fill(0, 0, appWidth, CELL_H, DosPalette.LIGHT_GRAY);
-        drawDos(g, " File   Edit   View   Search   Run   Debug   Options   Help ",
-                0, 0, DosPalette.BLACK);
+    	menuBar.render(g, this);
     }
 
     @Override
     protected String footerHints() {
         return switch (mode) {
-            case MENU       -> menuBar.currentFooterHelp();
+            case MENU       -> menuBar.footerHelp();
             case DIALOG     -> " F1=Help  Enter=Execute  Esc=Cancel  Tab=Next Field  Arrow=Next Item ";
             case RUN_OUTPUT -> " Press any key to continue ";
             case EDITOR     -> (focus == Focus.IMMEDIATE)
@@ -119,7 +126,8 @@ public class QBasicApplication extends AbstractEditorApplication implements File
             case RUNNING -> switch (runState) {
 	            case WAITING_INPUT -> " Type your input, ENTER to submit, ESC to abort ";
 	            case WAITING_SLEEP -> " Sleeping...  ESC to abort ";
-	            default            -> " Running...  ESC to abort ";
+	            case FINISHED      -> " Press any key to continue ";
+	            case RUNNING       -> " Running...  ESC to abort ";
 	        };
         };
     }
@@ -168,30 +176,26 @@ public class QBasicApplication extends AbstractEditorApplication implements File
                 return true;
 
             case MENU: {
-                String action = menuBar.handleKey(key);
-                if (action == null) {
-                	return true;
-                }
-                if (action.equals("__close__")) {
-                    mode = Mode.EDITOR;
+            	if (menuBar.keyPressed(key, scan, mods)) {
+                    if (!menuBar.isOpen()) mode = Mode.EDITOR;
                     return true;
                 }
-            	if (isPrintableKey(key)) consumingMenuKeystroke = true;
-                invokeMenuAction(action);
                 return true;
             }
 
             case DIALOG:
-                return super.keyPressed(key, scan, mods);
+            	if (overlay.keyPressed(key, scan, mods)) return true;
+                return true;
 
             case EDITOR:
+            	if (overlay.keyPressed(key, scan, mods)) return true;
                 if ((mods & GLFW.GLFW_MOD_ALT) != 0) {
                     int letter = letterFromKey(key);
-                    if (letter >= 0) {
-                        menuBar.openByMnemonic((char) letter);
-                        if (menuBar.isActive()) { mode = Mode.MENU; return true; }
+                    if (letter >= 0 && menuBar.openByMnemonic((char) letter)) {
+                        mode = Mode.MENU;
+                        return true;
                     }
-                    if (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT) {
+                    if (isAltKey) {
                         menuBar.open();
                         mode = Mode.MENU;
                         return true;
@@ -208,7 +212,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
                         insertTab();
                         return true;
                     }
-                    // in immediate: tab is a no-op for now (or insert too)
                     immediate.insertTab();
                     return true;
                 }
@@ -324,7 +327,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         switch (action) {
             case "file.exit":
             	pendingExit = true;
-                //screen.returnToShell();
                 return;
             case "file.save":
                 saveFile();
@@ -333,17 +335,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
                 startRun();
                 return;
             case "help.survival":
-                dialog = new DialogState()
-                        .addLine("")
-                        .addLine("QBasic Survival Guide")
-                        .addLine("")
-                        .addLine("F5 runs your program.")
-                        .addLine("F2 saves to disk.")
-                        .addLine("ALT opens the menu bar.")
-                        .addLine("")
-                        .addItem("Press ESC to close", "close")
-                        .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
-                mode = Mode.DIALOG;
+            	showSurvivalGuide()
                 return;
             case "err.ok":
                 dialog = null;
@@ -368,31 +360,24 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
     @Override
     public boolean charTyped(char cp, int mods) {
-    	if (mode == Mode.RUNNING && runState != RunState.WAITING_INPUT && host != null) {
-            if (cp >= 32 && cp != 127) {
+    	// RUNNING: feed INKEY$ or the INPUT buffer, depending on state.
+        if (mode == Mode.RUNNING && host != null) {
+            if (cp < 32 || cp == 127) return true;
+
+            if (runState == RunState.WAITING_INPUT) {
+                inputBuffer.append(cp);
+                host.print(String.valueOf(cp));
+            } else {
                 host.enqueueKey(String.valueOf(cp));
             }
             return true;
         }
 
-        if (mode == Mode.RUNNING && runState == RunState.WAITING_INPUT) {
-            if (cp >= 32 && cp != 127) {
-                inputBuffer.append(cp);
-                host.print(String.valueOf(cp));
-            }
-            return true;
-        }
-    	if (mode == Mode.RUNNING && host != null) {
-            host.enqueueKey(String.valueOf(cp));
-            return true;
-        }
-    	if (consumingMenuKeystroke) {
-            consumingMenuKeystroke = false;
-            return true;
-        }
-        if (mode == Mode.MENU)       return true;
-        if (mode == Mode.DIALOG)     return true;
         if (mode == Mode.RUN_OUTPUT) return true;
+
+        if (consumingMenuKeystroke) { consumingMenuKeystroke = false; return true; }
+        if (mode == Mode.MENU)   return true;
+        if (mode == Mode.DIALOG) return true;
 
         if (mode == Mode.EDITOR && focus == Focus.IMMEDIATE) {
             immediate.insert(cp);
@@ -457,6 +442,73 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
         // Restore to a fresh text screen so a subsequent run starts clean.
         setDisplayMode(new Screen0Text());
+    }
+ // ── Dialogs via TuiDialog ──────────────────────────────────────────
+
+    private void showWelcomeDialog() {
+        TuiDialog dlg = new TuiDialog()
+                .addLine("")
+                .addLine("Welcome to MS-DOS QBasic")
+                .addLine("")
+                .addLine("Copyright (C) Microsoft Corporation, 1987-1992.")
+                .addLine("All rights reserved.")
+                .addLine("")
+                .addItem("Press Enter to see the Survival Guide", "help.survival")
+                .addItem("Press ESC to clear this dialog box", "close");
+
+        dlg.onAction(a -> {
+            dismissOverlay(dlg);
+            if (a.equals("help.survival")) showSurvivalGuide();
+            else mode = Mode.EDITOR;
+        });
+        dlg.onCancel(() -> { dismissOverlay(dlg); mode = Mode.EDITOR; });
+        showOverlay(dlg);
+    }
+
+    private void showSurvivalGuide() {
+        TuiDialog dlg = new TuiDialog()
+                .addLine("")
+                .addLine("QBasic Survival Guide")
+                .addLine("")
+                .addLine("F5 runs your program.")
+                .addLine("F2 saves to disk.")
+                .addLine("ALT opens the menu bar.")
+                .addLine("")
+                .addItem("Press ESC to close", "close");
+
+        dlg.onAction(a -> { dismissOverlay(dlg); mode = Mode.EDITOR; });
+        dlg.onCancel(() -> { dismissOverlay(dlg); mode = Mode.EDITOR; });
+        showOverlay(dlg);
+        mode = Mode.DIALOG;
+    }
+
+    private void showFileError(String message) {
+        TuiDialog dlg = new TuiDialog()
+                .addLine("")
+                .addLine(message == null || message.isEmpty() ? "Invalid syntax" : message)
+                .addLine("")
+                .addItem("OK",   "err.ok")
+                .addItem("Help", "err.help");
+
+        dlg.onAction(a -> {
+            dismissOverlay(dlg);
+            mode = Mode.EDITOR;
+            if (a.equals("err.help")) {
+                TuiDialog help = new TuiDialog()
+                        .addLine("")
+                        .addLine("ERR code: " + pendingErrorCode)
+                        .addLine("")
+                        .addLine("Press ESC to close")
+                        .addLine("")
+                        .addItem("OK", "close");
+                help.onAction(x -> { dismissOverlay(help); mode = Mode.EDITOR; });
+                help.onCancel(() -> { dismissOverlay(help); mode = Mode.EDITOR; });
+                showOverlay(help);
+            }
+        });
+        dlg.onCancel(() -> { dismissOverlay(dlg); mode = Mode.EDITOR; });
+        showOverlay(dlg);
+        mode = Mode.DIALOG;
     }
 
     @Override

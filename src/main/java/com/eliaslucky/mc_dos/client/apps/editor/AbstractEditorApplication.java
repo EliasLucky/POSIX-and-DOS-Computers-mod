@@ -20,12 +20,11 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     protected int scrollRow, scrollCol;
     protected boolean modified;
     protected String statusMessage = "";
-
-    // Popup dialog (null when none shown)
-    protected DialogState dialog;
-
-    protected AbstractEditorApplication(ComputerTerminalScreen screen,
-                                         String path, String initialContent) {
+    
+    protected final TuiScreen overlay = new TuiScreen();
+    protected TuiTheme theme = TuiThemes.QBASIC;
+    
+    protected AbstractEditorApplication(ComputerTerminalScreen screen, String path, String initialContent) {
         super(screen);
         this.filePath = (path == null || path.isEmpty()) ? "UNTITLED" : path;
         if (initialContent != null && !initialContent.isEmpty()) {
@@ -56,7 +55,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
     // Render
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, appWidth, appHeight, DosPalette.BLUE);
+        g.fill(0, 0, appWidth, appHeight, theme.screenBg());
 
         renderMenuBar(g);
         renderHeader(g);
@@ -65,9 +64,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
         renderDivider(g);
         renderFooter(g);
 
-        if (dialog != null) {
-            dialog.render(g, cols(), rows(), this);
-        }
+        overlay.render(g, this);
     }
 
     protected void renderEditorPane(GuiGraphics g) {
@@ -98,27 +95,6 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
             }
         }
     }
-
-    /** Draws the "─────── Immediate ───────" splitter above the footer. */
-    /*protected void renderSplitterAndImmediate(GuiGraphics g) {
-        int y = immediateY();
-        int w = cols();
-        // Fill the strip with blue
-        g.fill(0, y, appWidth, y + CELL_H, DosPalette.BLUE);
-
-        String label = " Immediate ";
-        int labelStart = Math.max(0, (w - label.length()) / 2);
-        // Draw box-drawing dashes to left and right of "Immediate"
-        StringBuilder left  = new StringBuilder();
-        StringBuilder right = new StringBuilder();
-        for (int i = 0; i < labelStart; i++)              left.append('\u2500');
-        for (int i = labelStart + label.length(); i < w; i++) right.append('\u2500');
-
-        drawDos(g, left.toString(),  0, y, DosPalette.WHITE);
-        drawDos(g, label,            labelStart * CELL_W, y, DosPalette.WHITE);
-        drawDos(g, right.toString(), (labelStart + label.length()) * CELL_W, y, DosPalette.WHITE);
-        renderImmediateContent(g);
-    }*/
     
     protected void renderImmediateContent(GuiGraphics g) {
         // default: nothing
@@ -144,24 +120,31 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
 
     protected void renderFooter(GuiGraphics g) {
         int y = (rows() - 1) * CELL_H;
-        g.fill(0, y, appWidth, y + CELL_H, DosPalette.LIGHT_GRAY);
+        g.fill(0, y, appWidth, y + CELL_H, theme.statusBg());
 
         String left = footerHints();
-        drawDos(g, left, 0, y, DosPalette.BLACK);
+        drawDos(g, left, 0, y, theme.statusFg());
 
-        String right = (dialog != null || !modeIsEditor()) ? "" :
-                (statusMessage.isEmpty() ? (modified ? " *Modified" : "")
-                                         : " " + statusMessage + " ");
-        if (!right.isEmpty()) {
-            int rightW = right.length() * CELL_W;
-            drawDos(g, right, cols() * CELL_W - rightW, y, DosPalette.BLACK);
+        if (statusMessage != null && !statusMessage.isEmpty()) {
+            int rightW = statusMessage.length() * CELL_W;
+            drawDos(g, statusMessage, cols() * CELL_W - rightW, y, theme.statusFg());
         }
     }
+    /** Subclasses push a dialog or menu onto the overlay and give it focus. */
+    protected void showOverlay(TuiWidget w) {
+        overlay.add(w);
+        overlay.setFocus(w);
+    }
 
+    /** Subclasses remove an overlay when it closes. */
+    protected void dismissOverlay(TuiWidget w) {
+        overlay.remove(w);
+        overlay.setFocus(null);
+    }
     // Input
     @Override
     public boolean charTyped(char cp, int mods) {
-        if (dialog != null) return dialog.charTyped(cp);
+    	if (overlay.charTyped(cp, mods)) return true;
 
         if (cp >= 32 && cp != 127) {
             lines.get(cursorRow).insert(cursorCol, cp);
@@ -176,7 +159,7 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        if (dialog != null) return dialog.keyPressed(key);
+    	if (overlay.keyPressed(key, scan, mods)) return true;
         if (handleFunctionKey(key)) return true;
 
         switch (key) {
@@ -293,25 +276,6 @@ public abstract class AbstractEditorApplication extends TerminalApplication {
 
         scrollRow = Math.max(0, Math.min(scrollRow, Math.max(0, lines.size() - rows)));
         scrollCol = Math.max(0, Math.min(scrollCol, Math.max(0, maxLineLength() - cols)));
-    }
-
-    // Drawing helper - all subclasses should use this
-    public void drawDos(GuiGraphics g, String text, int x, int y, int color) {
-    	if (text == null || text.isEmpty()) return;
-	    var mcFont = Minecraft.getInstance().font;
-	    var style  = screen.getDosStyle();
-
-	    for (int i = 0; i < text.length(); i++) {
-	        char c = text.charAt(i);
-	        if (c == ' ') continue;              // spaces advance by the math below
-	        g.drawString(mcFont,
-	            Component.literal(String.valueOf(c)).withStyle(style),
-	            x + i * CELL_W, y,
-	            color, false);
-	    }
-        /*g.drawString(Minecraft.getInstance().font,
-                Component.literal(text).withStyle(screen.getDosStyle()),
-                x, y, color, false);*/
     }
 
     public String getFilePath() { return filePath; }
