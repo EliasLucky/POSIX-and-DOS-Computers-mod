@@ -123,6 +123,7 @@ public class VirtualFileSystem {
 			Node loadedRoot = Node.load(tag.getCompound("Root"),null);
 			this.root.children.clear();
 			this.root.children.putAll(loadedRoot.children);
+			reparentChildren(this.root);
 		}
 		this.currentDir = root;
 	    this.currentPath = "/";
@@ -131,6 +132,13 @@ public class VirtualFileSystem {
 		//	Node found = resolvePath(this.currentPath);
 		//	this.currentDir = (found != null && found.isDirectory) ? found : root;
 		//}
+	}
+	
+	private static void reparentChildren(Node parent) {
+	    for (Node child : parent.children.values()) {
+	        child.parent = parent;
+	        reparentChildren(child);
+	    }
 	}
 	
 	/**
