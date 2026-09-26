@@ -65,7 +65,7 @@ public class VirtualFileSystem {
 	        String drive = clean.substring(0, 2).toUpperCase(Locale.ROOT);
 	        Mount m = mounts.get(drive);
 	        if (m == null) return null;
-	        return resolveFrom(m.rootNode(), clean.substring(2));
+	        return resolveFrom(m.rootNode(), clean.substring(2), policy);
 	    }
 
 	    // POSIX absolute path: check mounts first
@@ -80,13 +80,13 @@ public class VirtualFileSystem {
 	        if (best != null) {
 	            Mount m = mounts.get(best);
 	            String rest = clean.substring(best.length());
-	            return resolveFrom(m.rootNode(), rest);
+	            return resolveFrom(m.rootNode(), rest, policy);
 	        }
-	        return resolveFrom(root, clean);
+	        return resolveFrom(root, clean, policy);
 	    }
 
 	    // Relative path from currentDir
-	    return resolveFrom(currentDir, clean);
+	    return resolveFrom(currentDir, clean, policy);
 	}
 
 	/** Walk a path string from a starting node. */
