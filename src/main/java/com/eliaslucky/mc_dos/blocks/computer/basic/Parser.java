@@ -622,6 +622,25 @@ public class Parser {
             skipLine();
 
             List<Statement> body = new ArrayList<>();
+            // Inline form: CASE value : stmt : stmt
+            if (peekIsPunct(":")) {
+                advance();
+                while (!atEndOfStatement()) {
+                    Statement s = parseStatement(line);
+                    if (s != null) body.add(s);
+                    if (peekIsPunct(":")) { advance(); continue; }
+                    break;
+                }
+                // Consume trailing tokens and the newline.
+                while (!peek().is(Token.TokenType.NEWLINE)
+                        && !peek().is(Token.TokenType.EOF)) advance();
+                if (peek().is(Token.TokenType.NEWLINE)) advance();
+                clauses.add(new SelectStmt.CaseClause(values, body));
+                continue;
+            }
+
+            // Block form: body on following lines
+            if (peek().is(Token.TokenType.NEWLINE)) advance();
             while (true) {
                 skipNewlines();
                 if (peek().is(Token.TokenType.EOF)) break;
