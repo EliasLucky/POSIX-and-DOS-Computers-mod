@@ -14,7 +14,7 @@ public class AllBlockEntities {
 		() -> BlockEntityType.Builder.of(ComputerBlockEntity::new, AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()).build(null)
 	);
 	
-	public static final RegistryObject<BlockEntityType<ComputerBlockEntity>> COMPUTER_PROGRAMMABLE_BLOCK = BLOCK_ENTITIES.register("computer_programmable_block",
+	public static final RegistryObject<BlockEntityType<ComputerBlockEntity>> HARDWARE_LPC_MCCMD_BLOCK = BLOCK_ENTITIES.register("computer_programmable_bloc",
 			() -> BlockEntityType.Builder.of(ComputerBlockEntity::new, AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()).build(null)
 		);
 }
