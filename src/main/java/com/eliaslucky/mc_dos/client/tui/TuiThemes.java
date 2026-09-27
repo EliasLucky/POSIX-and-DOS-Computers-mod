@@ -66,16 +66,24 @@ public final class TuiThemes {
             TuiPalette.DARK_GRAY,
             TuiPalette.RED, TuiPalette.RED, TuiPalette.GREEN);
 
-    /** Award BIOS: blue background, cyan highlights. */
     public static final TuiTheme AWARD_SETUP = new TuiTheme(
-            TuiPalette.CYAN,         TuiPalette.BLACK,
-            TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,
-            TuiPalette.BLACK,        TuiPalette.WHITE,       TuiPalette.YELLOW,
-            TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,
-            TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,
-            TuiPalette.BLACK,
-            TuiPalette.DARK_GRAY,
-            TuiPalette.RED, TuiPalette.RED, TuiPalette.GREEN);
+            TuiPalette.BLUE,          // screenBg
+            TuiPalette.LIGHT_GRAY,    // screenFg
+            TuiPalette.BLUE,          // titleBg
+            TuiPalette.YELLOW,        // titleFg
+            TuiPalette.LIGHT_GRAY,    // highlightBg
+            TuiPalette.BLACK,         // highlightFg
+            TuiPalette.RED,           // highlightMn
+            TuiPalette.LIGHT_GRAY,    // frameBg
+            TuiPalette.LIGHT_GRAY,    // border
+            TuiPalette.LIGHT_GRAY,    // statusBg
+            TuiPalette.BLACK,         // statusFg
+            TuiPalette.YELLOW,        // value
+            TuiPalette.DARK_GRAY,     // disabled
+            TuiPalette.LIGHT_RED,     // warning
+            TuiPalette.LIGHT_RED,     // error
+            TuiPalette.LIGHT_GREEN    // success
+    );
 
     /** Turbo Pascal IDE: blue editor, yellow text, gray chrome. */
     public static final TuiTheme TURBO_PASCAL = new TuiTheme(
