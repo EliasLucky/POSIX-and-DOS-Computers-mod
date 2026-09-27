@@ -21,11 +21,13 @@ public class ClientboundBiosConfigPacket {
     private final BlockPos pos;
     private final MachineConfig config;
     private final String biosName;
+    private final String setupScreenId;
 
-    public ClientboundBiosConfigPacket(BlockPos pos, MachineConfig config, String biosName) {
+    public ClientboundBiosConfigPacket(BlockPos pos, MachineConfig config, String biosName, String setupScreenId) {
         this.pos = pos;
         this.config = config;
         this.biosName = biosName;
+        this.setupScreenId = setupScreenId;
     }
 
     public ClientboundBiosConfigPacket(FriendlyByteBuf buffer) {

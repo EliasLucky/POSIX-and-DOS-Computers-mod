@@ -1,4 +1,4 @@
-package com.eliaslucky.mc_dos.client.apps.bios;
+package com.eliaslucky.mc_dos;
 
 import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;

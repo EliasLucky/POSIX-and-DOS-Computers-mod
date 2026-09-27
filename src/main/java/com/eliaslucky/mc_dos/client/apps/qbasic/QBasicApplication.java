@@ -42,7 +42,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
               args.length > 0 && !args[0].isEmpty() ? args[0] : "Untitled",
               initialContent);
         
-        this.menuBar = new TuiMenu(0, QBasicMenus.ROOT_TUI);
+        this.menuBar = new TuiMenu(0, QBasicMenus.ROOT);
         this.menuBar.onAction(this::invokeMenuAction);
         
         if (initialContent == null || initialContent.isEmpty()) {

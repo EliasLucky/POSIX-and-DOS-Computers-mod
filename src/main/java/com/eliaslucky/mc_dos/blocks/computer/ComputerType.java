@@ -1,8 +1,10 @@
 package com.eliaslucky.mc_dos.blocks.computer;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import com.eliaslucky.mc_dos.api.bios.Bios;
+import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.api.vfs.DriveType;
 import com.eliaslucky.mc_dos.blocks.computer.processors.Dos6CommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;

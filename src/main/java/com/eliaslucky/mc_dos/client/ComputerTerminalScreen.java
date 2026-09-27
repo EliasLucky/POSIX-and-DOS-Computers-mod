@@ -3,13 +3,18 @@ package com.eliaslucky.mc_dos.client;
 import org.lwjgl.glfw.GLFW;
 
 import com.eliaslucky.mc_dos.Computers;
+import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
+import com.eliaslucky.mc_dos.client.apps.FileAwareApp;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplicationRegistry;
+import com.eliaslucky.mc_dos.client.apps.bios.BiosSetupRegistry;
 import com.eliaslucky.mc_dos.network.ModMessages;
 import com.eliaslucky.mc_dos.network.ServerboundCloseTerminalPacket;
 import com.eliaslucky.mc_dos.network.ServerboundCommandPacket;
 import com.eliaslucky.mc_dos.network.ServerboundFileWritePacket;
+import com.eliaslucky.mc_dos.network.ServerboundRequestBiosConfigPacket;
+import com.eliaslucky.mc_dos.network.ServerboundSkipPostPacket;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -33,7 +38,9 @@ public class ComputerTerminalScreen extends Screen {
 	private final List<String> history = new ArrayList<>();
 	private final StringBuilder inputBuffer = new StringBuilder();
 	private String activePath;
-
+	private boolean postPhase = false;
+	private long    postStartMillis = 0;
+	private int     postCountdownSeconds = 5;
 	private static final int MARGIN = 10;
 	private static final int LINE_HEIGHT = 16;
 
@@ -42,10 +49,6 @@ public class ComputerTerminalScreen extends Screen {
 		this.pos = pos;
 		this.computerType = computerType;
 		this.activePath = computerType.defaultPath;
-
-		for (String line : computerType.bootSequence) {
-	        history.add(line);
-	    }
 	}
 	
 	@Override
@@ -71,12 +74,12 @@ public class ComputerTerminalScreen extends Screen {
 				wrappedLines.addAll(this.font.split(Component.literal(line).withStyle(DOS_STYLE), maxLineWidth));
 			}
 		}
-
-		String prompt = computerType.commandProcessor.getPrompt(this.activePath);
-		String cursor = ((System.currentTimeMillis() / 500) % 2 == 0) ? "_" : " ";
-		String currentLine = prompt + inputBuffer.toString() + cursor;
-		wrappedLines.addAll(this.font.split(Component.literal(currentLine).withStyle(DOS_STYLE), maxLineWidth));
-
+		if (!postPhase) {
+			String prompt = computerType.commandProcessor.getPrompt(this.activePath);
+			String cursor = ((System.currentTimeMillis() / 500) % 2 == 0) ? "_" : " ";
+			String currentLine = prompt + inputBuffer.toString() + cursor;
+			wrappedLines.addAll(this.font.split(Component.literal(currentLine).withStyle(DOS_STYLE), maxLineWidth));
+		}
 		// auto-scroll window bounds based on screen height
 		int maxVisibleLines = Math.max(1, (this.height - (MARGIN * 2)) / LINE_HEIGHT);
 		int totalLines = wrappedLines.size();
@@ -87,13 +90,26 @@ public class ComputerTerminalScreen extends Screen {
 			guiGraphics.drawString(this.font, wrappedLines.get(i), MARGIN, yOffset, textColor, false);
 			yOffset += LINE_HEIGHT;
 		}
-
+		if (postPhase) {
+			long elapsed = System.currentTimeMillis() - postStartMillis;
+			int remaining = postCountdownSeconds - (int)(elapsed / 1000);
+			if (remaining <= 0) {
+				postPhase = false;
+				ModMessages.sendToServer(new ServerboundSkipPostPacket(this.pos));
+			} else {
+				String msg = "Press DEL to enter SETUP ... " + remaining;
+				int w = this.font.width(msg);
+				int y = this.height - MARGIN - LINE_HEIGHT;
+				guiGraphics.drawString(this.font, msg, this.width - MARGIN - w, y, textColor, false);
+			}
+		}
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
 	@Override
 	public boolean charTyped(char codePoint, int modifiers) {
 		if (activeApp != null) return activeApp.charTyped(codePoint, modifiers);
+		if (postPhase) return true;
 		if (codePoint >= 32 && codePoint != 127) {
 			inputBuffer.append(codePoint);
 			return true;
@@ -103,6 +119,15 @@ public class ComputerTerminalScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (postPhase) {
+		    if (keyCode == GLFW.GLFW_KEY_DELETE) {
+		        postPhase = false;
+		        ModMessages.sendToServer(new ServerboundRequestBiosConfigPacket(pos));
+		        return true;
+		    }
+		    postPhase = false;
+		    ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
+		}
 		if (activeApp != null) {
 			if (activeApp.keyPressed(keyCode, scanCode, modifiers)) return true;
 			if (keyCode == GLFW.GLFW_KEY_ESCAPE) { closeApp(); return true; }
@@ -155,7 +180,15 @@ public class ComputerTerminalScreen extends Screen {
 			activeApp = null;
 		}
 	}
-	
+	/**
+	 * Called by a {@link TerminalApplication} when the user exits the
+	 * app and wants to return to the shell prompt.
+	 *
+	 * <p>Unlike {@link #onClose()}, this does <em>not</em> send the
+	 * close packet to the server. The player is still occupying the
+	 * terminal; only the running app is dismissed. Command history
+	 * stays visible and the shell is immediately interactive again.
+	 */
 	public void returnToShell() {
 		if (activeApp != null) {
 			activeApp.onClose();
@@ -215,7 +248,46 @@ public class ComputerTerminalScreen extends Screen {
 
 		for (String line : output.split("\n")) history.add(line);
 	}
+	/**
+	 * Called by {@link ClientboundTerminalStatePacket} when the server
+	 * tells the client what phase the machine is in.
+	 *
+	 * <p>When the machine is in POST, the client clears its history,
+	 * seeds it with the BIOS's POST lines, and starts the SETUP
+	 * countdown. When the machine is already running, the client just
+	 * clears the countdown flag and leaves the history alone — the
+	 * shell will populate it via normal command execution.
+	 *
+	 * @param postPhase       whether the machine is showing POST
+	 * @param postLines       BIOS output lines, empty when not in POST
+	 * @param countdownSeconds how long the DEL prompt stays visible
+	 */
+	public void onTerminalState(boolean postPhase, List<String> postLines, int countdownSeconds) {
+	    this.postPhase = postPhase;
+	    this.postStartMillis = System.currentTimeMillis();
+	    this.postCountdownSeconds = countdownSeconds;
+	    if (postPhase) {
+	        history.clear();
+	        for (String line : postLines) history.add(line);
+	        history.add("");
+	    }
+	}
 
+	/**
+	 * Called by {@link ClientboundBiosConfigPacket} when the server
+	 * responds to a SETUP request. Looks up the setup screen by ID in
+	 * {@link BiosSetupRegistry}. Addons that ship their own BIOS register
+	 * their setup screen under the same ID that their BIOS's
+	 * {@code setupScreenId()} returns.
+	 */
+	public void onBiosConfigReceived(MachineConfig config, String biosName, String setupScreenId) {
+	    var factory = BiosSetupRegistry.get(setupScreenId);
+	    if (factory == null) {
+	        history.add("No setup screen registered for BIOS: " + setupScreenId);
+	        return;
+	    }
+	    launchApp(factory.create(this, config, biosName));
+	}
 	public Font getDosFont()      { return this.font; }
 	public Style getDosStyle()    { return DOS_STYLE; }
 	public BlockPos getPos()      { return this.pos; }
