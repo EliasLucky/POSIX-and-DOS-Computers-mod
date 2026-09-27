@@ -8,6 +8,8 @@ import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
 import com.eliaslucky.mc_dos.client.apps.editor.AbstractEditorApplication;
 import com.eliaslucky.mc_dos.client.apps.editor.DialogState;
+import com.eliaslucky.mc_dos.client.tui.TuiMenu;
+
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
@@ -82,7 +84,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         renderMenuBar(g);
         renderHeader(g);
         renderEditorPane(g);
-        renderImmediateArea(g);
+        renderImmediateContent(g);
         renderDivider(g);
         renderFooter(g);
         overlay.render(g, this);
@@ -296,12 +298,11 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     private void executeImmediateLine(String line) {
         if (line == null || line.isBlank()) return;
 
-        // Collect output as text - do NOT hijack the main display.
         HeadlessHost headless = new HeadlessHost();
         new QBasicInterpreter(headless).run(line);
         if (headless.hadError()) {
-            showSyntaxError(headless.getLastErrorCode(), headless.getLastErrorMessage());
-            // Do NOT clear the buffer - the user can fix and re-run.
+        	pendingErrorCode = headless.getLastErrorCode();
+            showFileError(headless.getLastErrorMessage());
             return;
         }
 
@@ -407,15 +408,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         }
     }
 
-    private void showFileError(String message) {
-        dialog = new DialogState()
-                .addLine("")
-                .addLine(message == null || message.isEmpty() ? "Write error" : message)
-                .addLine("")
-                .addItem("OK", "err.ok")
-                .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
-        mode = Mode.DIALOG;
-    }
     // Run pipeline
     private void startRun() {
         pendingSourceSnapshot = currentSource();
@@ -443,8 +435,8 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         // Restore to a fresh text screen so a subsequent run starts clean.
         setDisplayMode(new Screen0Text());
     }
- // ── Dialogs via TuiDialog ──────────────────────────────────────────
-
+    
+    // Dialogs via TuiDialog
     private void showWelcomeDialog() {
         TuiDialog dlg = new TuiDialog()
                 .addLine("")
