@@ -2,6 +2,7 @@ package com.eliaslucky.mc_dos.blocks.computer;
 
 import com.eliaslucky.mc_dos.api.bios.Bios;
 import com.eliaslucky.mc_dos.api.bios.MachineConfig;
+import com.eliaslucky.mc_dos.api.vfs.DriveType;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 
 import java.util.List;
@@ -49,8 +50,21 @@ public interface MachineType {
     Bios bios();
 
     /** @return physical drive bays fitted to this machine. */
-    List<ComputerType.DriveBaySpec> driveBays();
+    List<DriveBaySpec> driveBays();
 
     /** @return factory for this machine's factory-default configuration. */
     Supplier<MachineConfig> defaultConfig();
+    /**
+     * A drive bay fitted to a machine. Describes the bay's physical
+     * capabilities and the naming conventions the OS should use for it.
+     *
+     * @param type            the drive type (floppy, CD, DVD, ...)
+     * @param dosLetter       the DOS drive letter, or {@code null}
+     * @param posixDevice     the POSIX device path, or {@code null}
+     * @param posixMountPoint the POSIX default mount point, or {@code null}
+     */
+    record DriveBaySpec(DriveType type,
+                        String dosLetter,
+                        String posixDevice,
+                        String posixMountPoint) {}
 }

@@ -2,6 +2,9 @@ package com.eliaslucky.mc_dos.client.apps.qbasic;
 
 import java.util.List;
 
+import com.eliaslucky.mc_dos.client.tui.TuiMenu.Menu;
+import com.eliaslucky.mc_dos.client.tui.TuiMenu.Item;
+
 /*
  * Top menus
  * */

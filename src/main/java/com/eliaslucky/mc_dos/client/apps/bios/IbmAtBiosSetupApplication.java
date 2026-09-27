@@ -1,4 +1,4 @@
-package com.eliaslucky.mc_dos;
+package com.eliaslucky.mc_dos.client.apps.bios;
 
 import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
@@ -10,6 +10,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public class IbmAtBiosSetupApplication extends TerminalApplication {
     private final MachineConfig original;
@@ -142,8 +143,34 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
         widgets.setFocus(table);
     }
 
-    // ...showDisplayPicker, showTextEditor...
+    private void showDisplayPicker() {
+        TuiDialog dlg = new TuiDialog().addLine("").addLine("Set display:").addLine("");
+        for (MachineConfig.DisplayType t : MachineConfig.DisplayType.values()) {
+            dlg.addItem(t.displayName(), "pick:" + t.name());
+        }
+        dlg.onAction(a -> {
+            dismissDialog(dlg);
+            if (a.startsWith("pick:")) {
+                config = config.withPrimaryDisplay(
+                        MachineConfig.DisplayType.valueOf(a.substring(5)));
+                rebuildTable();
+            }
+        });
+        dlg.onCancel(() -> dismissDialog(dlg));
+        widgets.add(dlg);
+        widgets.setFocus(dlg);
+    }
 
+    private void showTextEditor(String action) {
+        showMessage("Not implemented", "Press ESC to close");
+    }
+    private void showMessage(String title, String body) {
+        TuiDialog dlg = new TuiDialog().addLine("").addLine(body).addLine("").addItem("OK", "close");
+        dlg.onAction(a -> dismissDialog(dlg));
+        dlg.onCancel(() -> dismissDialog(dlg));
+        widgets.add(dlg);
+        widgets.setFocus(dlg);
+    }
     @Override
     public String getTitle() { return "BIOS SETUP"; }
 }

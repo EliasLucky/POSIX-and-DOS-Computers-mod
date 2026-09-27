@@ -119,6 +119,6 @@ public abstract class TerminalApplication {
     public void onClose() {}
     public abstract String getTitle();
 
-    protected int cols() { return Math.max(1, appWidth  / CELL_W); }
-    protected int rows() { return Math.max(1, appHeight / CELL_H); }
+    public int cols() { return Math.max(1, appWidth  / CELL_W); }
+    public int rows() { return Math.max(1, appHeight / CELL_H); }
 }

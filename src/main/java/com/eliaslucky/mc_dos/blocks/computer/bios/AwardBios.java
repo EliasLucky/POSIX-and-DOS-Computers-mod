@@ -92,7 +92,7 @@ public class AwardBios implements Bios {
     // Helpers
     private static String cpuName(ComputerBlockEntity machine) {
         // A real BIOS reads CPUID;
-        if (machine == null || machine.getComputerType() == null) return "Generic x86";
-        return machine.getComputerType().cpuName;
+        if (machine == null || machine.getMachineType() == null) return "Generic x86";
+        return machine.getMachineType().cpuName();
     }
 }

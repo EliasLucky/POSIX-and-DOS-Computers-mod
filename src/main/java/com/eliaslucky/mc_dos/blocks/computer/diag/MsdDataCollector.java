@@ -6,7 +6,7 @@ import com.eliaslucky.mc_dos.api.hardware.Kernel;
 import com.eliaslucky.mc_dos.api.hardware.PeripheralAddress;
 import com.eliaslucky.mc_dos.api.hardware.PeripheralBus;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
-import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
+import com.eliaslucky.mc_dos.blocks.computer.MachineType;
 import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
 
 import java.util.List;
@@ -50,8 +50,8 @@ public final class MsdDataCollector {
      * @return a sectioned report
      */
     public static String collect(ComputerBlockEntity computer) {
-        ComputerType type = computer.getComputerType();
-        Bios bios = type.bios;
+        MachineType type = computer.getMachineType();
+        Bios bios = type.bios();
         MachineConfig config = computer.getMachineConfig();
         Kernel kernel = computer.getKernel();
         PeripheralBus bus = new AdjacentBlocksBus(
@@ -62,12 +62,12 @@ public final class MsdDataCollector {
 
         // COMPUTER
         section(out, "COMPUTER");
-        line(out, "Computer Name", type.modelName);
-        line(out, "Processor", type.cpuName);
+        line(out, "Computer Name", type.modelName());
+        line(out, "Processor", type.cpuName());
         line(out, "BIOS Manufacturer", bios.manufacturer());
         line(out, "BIOS Version", bios.version());
         line(out, "BIOS Date", bios.releaseDate());
-        line(out, "Bus Type", type.busType);
+        line(out, "Bus Type", type.busType());
         line(out, "Keyboard Type", "101-key Enhanced");
         line(out, "Math Coprocessor",
                 config != null && config.mathCoprocessor()
@@ -105,7 +105,7 @@ public final class MsdDataCollector {
 
         // OS VERSION
         section(out, "OS VERSION");
-        line(out, "Operating System", type.osVersion);
+        line(out, "Operating System", type.osVersion());
         line(out, "Boot Drive", "C:");
         line(out, "MS-DOS Location", "HMA");
 

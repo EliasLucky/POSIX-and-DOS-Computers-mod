@@ -34,7 +34,12 @@ public enum DiskMedia {
     private final long   capacityBytes;
     private final boolean writable;
     private final int    maxEntries;
-
+    /**
+     * @param display       the label printed by BIOS and format tools
+     * @param capacityBytes maximum content size, scaled for the mod
+     * @param maxEntries    maximum number of file entries
+     * @param writable      whether the media accepts writes
+     */
     DiskMedia(String display, long capacityBytes,int maxEntries, boolean writable) {
         this.display = display;
         this.capacityBytes = capacityBytes;

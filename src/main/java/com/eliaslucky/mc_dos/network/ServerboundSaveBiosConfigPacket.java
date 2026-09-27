@@ -14,20 +14,24 @@ import java.util.function.Supplier;
  * Sent from client to server when the player presses the SETUP key
  * during POST.
  *
- * <p>The server responds with a {@link ClientboundBiosConfigPacket}
- * containing the machine's current {@code MachineConfig} and its BIOS
- * name, so the client can open the matching SETUP screen.
+ * <p>The server replies with a {@link ClientboundBiosConfigPacket}
+ * carrying the machine's current {@link MachineConfig} and the
+ * identifier of the BIOS's setup screen. The client uses the
+ * identifier to look up the correct {@code TerminalApplication} in
+ * {@code BiosSetupRegistry}, so no BIOS name matching is needed on the
+ * client.
  *
- * <p>The state transition is: {@code POST} → {@code SETUP}. If the
- * machine is not in POST — because the countdown already expired, or
- * because another player opened SETUP first — the request is silently
+ * <p>State transition: {@code POST} → {@code SETUP}. If the machine is
+ * not in POST — because the countdown already expired, the player
+ * skipped it, or another player already opened SETUP — the request is
  * ignored. That matches the real BIOS behaviour of only honouring the
  * DEL key during the POST window.
  *
- * @since 1.5
+ * @since 1.0
  */
 public class ServerboundRequestBiosConfigPacket {
-    /** The position of the computer block whose BIOS is being opened. */
+
+    /** The block position of the computer whose BIOS is being opened. */
     private final BlockPos pos;
 
     /**
@@ -56,20 +60,25 @@ public class ServerboundRequestBiosConfigPacket {
                 return;
             }
 
+            // Only honour the request during POST. Anything else means
+            // the window has already passed, or someone else is in SETUP.
             if (computer.getBootState() != BootState.POST) {
                 return;
             }
 
+            // Transition to SETUP so the shell stays inactive while the
+            // player is editing BIOS settings.
             computer.setBootState(BootState.SETUP);
 
-            // Send the machine's current configuration and BIOS name.
-            // The client picks the SETUP screen by BIOS name.
+            // Reply with the machine's configuration and the identifier
+            // of the setup screen the client should open. The BIOS knows
+            // its own screen ID — that's the whole point of the field.
             ModMessages.sendToPlayer(
                     new ClientboundBiosConfigPacket(
                             this.pos,
                             computer.getMachineConfig(),
                             computer.getMachineType().bios().name(),
-                    computer.getMachineType().bios().setupScreenId()),
+                            computer.getMachineType().bios().setupScreenId()),
                     player);
         });
         ctx.setPacketHandled(true);

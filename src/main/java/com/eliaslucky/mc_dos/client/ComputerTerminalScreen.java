@@ -4,7 +4,7 @@ import org.lwjgl.glfw.GLFW;
 
 import com.eliaslucky.mc_dos.Computers;
 import com.eliaslucky.mc_dos.api.bios.MachineConfig;
-import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
+import com.eliaslucky.mc_dos.blocks.computer.MachineType;
 import com.eliaslucky.mc_dos.client.apps.FileAwareApp;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplicationRegistry;
@@ -33,7 +33,7 @@ public class ComputerTerminalScreen extends Screen {
 	private static final Style DOS_STYLE = Style.EMPTY.withFont(DOS_FONT);
 
 	private final BlockPos pos;
-	private final ComputerType computerType;
+	private final MachineType MachineType;
 	private TerminalApplication activeApp;
 	private final List<String> history = new ArrayList<>();
 	private final StringBuilder inputBuffer = new StringBuilder();
@@ -44,11 +44,11 @@ public class ComputerTerminalScreen extends Screen {
 	private static final int MARGIN = 10;
 	private static final int LINE_HEIGHT = 16;
 
-	public ComputerTerminalScreen(BlockPos pos, ComputerType computerType) {
-		super(Component.literal(computerType.modelName));
+	public ComputerTerminalScreen(BlockPos pos, MachineType MachineType) {
+		super(Component.literal(MachineType.modelName()));
 		this.pos = pos;
-		this.computerType = computerType;
-		this.activePath = computerType.defaultPath;
+		this.MachineType = MachineType;
+		this.activePath = MachineType.defaultPath();
 	}
 	
 	@Override
@@ -62,7 +62,7 @@ public class ComputerTerminalScreen extends Screen {
 
 		guiGraphics.fill(0, 0, this.width, this.height, 0xFF000000);
 
-		int textColor = computerType.textColor;
+		int textColor = MachineType.textColor();
 		int maxLineWidth = Math.max(50, this.width - (MARGIN * 2));
 
 		List<FormattedCharSequence> wrappedLines = new ArrayList<>();
@@ -75,7 +75,7 @@ public class ComputerTerminalScreen extends Screen {
 			}
 		}
 		if (!postPhase) {
-			String prompt = computerType.commandProcessor.getPrompt(this.activePath);
+			String prompt = MachineType.commandProcessor().getPrompt(this.activePath);
 			String cursor = ((System.currentTimeMillis() / 500) % 2 == 0) ? "_" : " ";
 			String currentLine = prompt + inputBuffer.toString() + cursor;
 			wrappedLines.addAll(this.font.split(Component.literal(currentLine).withStyle(DOS_STYLE), maxLineWidth));
@@ -135,7 +135,7 @@ public class ComputerTerminalScreen extends Screen {
 		}
 		if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
 			String command = inputBuffer.toString().trim();
-			String prompt = computerType.commandProcessor.getPrompt(this.activePath);
+			String prompt = MachineType.commandProcessor().getPrompt(this.activePath);
 			history.add(prompt + command);
 			
 			executeCommand(command);
@@ -291,7 +291,7 @@ public class ComputerTerminalScreen extends Screen {
 	public Font getDosFont()      { return this.font; }
 	public Style getDosStyle()    { return DOS_STYLE; }
 	public BlockPos getPos()      { return this.pos; }
-	public ComputerType getType() { return this.computerType; }
+	public MachineType getType() { return this.MachineType; }
 
 	@Override
 	public void onClose() {

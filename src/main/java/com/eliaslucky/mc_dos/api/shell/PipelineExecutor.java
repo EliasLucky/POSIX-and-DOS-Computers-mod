@@ -44,8 +44,7 @@ public class PipelineExecutor {
                     ? stage.command
                     : stage.command + " " + stage.args;
 
-            String output = computer.getComputerType().commandProcessor
-                    .processWithStdin(computer, fullLine, stdin);
+            String output = computer.getMachineType().commandProcessor().processWithStdin(computer, fullLine, stdin);
             if (output == null) output = "";
 
             byte[] outputBytes = output.getBytes(StandardCharsets.UTF_8);

@@ -5,7 +5,6 @@ import com.eliaslucky.mc_dos.client.apps.TerminalApplicationRegistry;
 import com.eliaslucky.mc_dos.client.apps.bios.BiosSetupRegistry;
 import com.eliaslucky.mc_dos.client.apps.bios.AwardBiosSetupApplication;
 import com.eliaslucky.mc_dos.client.apps.bios.IbmAtBiosSetupApplication;
-import com.eliaslucky.mc_dos.client.apps.edit.EditApplication;
 import com.eliaslucky.mc_dos.client.apps.msd.MsdApplication;
 import com.eliaslucky.mc_dos.client.apps.qbasic.QBasicApplication;
 
@@ -35,7 +34,7 @@ public final class ClientSetup {
 
             // Terminal applications
             TerminalApplicationRegistry.register("QBASIC", QBasicApplication::new);
-            TerminalApplicationRegistry.register("EDIT",   EditApplication::new);
+            //TerminalApplicationRegistry.register("EDIT",   EditApplication::new);
             TerminalApplicationRegistry.register("MSD",
                     (screen, args, content) -> new MsdApplication(screen, content));
 

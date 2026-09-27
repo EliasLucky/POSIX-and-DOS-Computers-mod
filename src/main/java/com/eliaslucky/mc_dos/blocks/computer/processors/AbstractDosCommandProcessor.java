@@ -317,7 +317,7 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 	}
 	
 	protected String doVer(ComputerBlockEntity computer) {
-		return computer.getComputerType().osVersion;
+		return computer.getMachineType().osVersion();
 	}
 	
 	protected String doDate() {

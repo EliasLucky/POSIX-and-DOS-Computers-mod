@@ -1,6 +1,7 @@
 package com.eliaslucky.mc_dos;
 
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
+import com.eliaslucky.mc_dos.blocks.peripheral.mccmd.MinecraftCommandTranslatorBlockEntity;
 
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.registries.DeferredRegister;

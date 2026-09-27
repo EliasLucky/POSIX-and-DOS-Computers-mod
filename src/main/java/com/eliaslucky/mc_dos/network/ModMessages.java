@@ -49,7 +49,11 @@ public class ModMessages {
 		        .encoder(ServerboundSkipPostPacket::encode)
 		        .consumerMainThread(ServerboundSkipPostPacket::handle)
 		        .add();
-
+		net.messageBuilder(ServerboundRequestBiosConfigPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+        .decoder(ServerboundRequestBiosConfigPacket::new)
+        .encoder(ServerboundRequestBiosConfigPacket::encode)
+        .consumerMainThread(ServerboundRequestBiosConfigPacket::handle)
+        .add();
 		// SERVER -> CLIENT
 		net.messageBuilder(ClientboundTerminalOutputPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
 			.decoder(ClientboundTerminalOutputPacket::new)

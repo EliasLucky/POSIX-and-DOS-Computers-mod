@@ -8,6 +8,7 @@ import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import com.eliaslucky.mc_dos.client.apps.display.Screen0Text;
 import com.eliaslucky.mc_dos.client.apps.editor.AbstractEditorApplication;
 import com.eliaslucky.mc_dos.client.apps.editor.DialogState;
+import com.eliaslucky.mc_dos.client.tui.TuiDialog;
 import com.eliaslucky.mc_dos.client.tui.TuiMenu;
 
 import net.minecraft.client.gui.GuiGraphics;

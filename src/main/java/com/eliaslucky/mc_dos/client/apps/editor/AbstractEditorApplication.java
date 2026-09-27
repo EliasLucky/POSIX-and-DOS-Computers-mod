@@ -3,6 +3,11 @@ package com.eliaslucky.mc_dos.client.apps.editor;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
+import com.eliaslucky.mc_dos.client.tui.TuiScreen;
+import com.eliaslucky.mc_dos.client.tui.TuiTheme;
+import com.eliaslucky.mc_dos.client.tui.TuiThemes;
+import com.eliaslucky.mc_dos.client.tui.TuiWidget;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;

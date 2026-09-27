@@ -57,7 +57,7 @@ public class ServerboundFileWritePacket {
             FileOpResult result = computer.getFileSystem().writeFile(path, content);
             if (result.success()) computer.setChanged();
 
-            String osFamily = computer.getComputerType().commandProcessor.osFamily();
+            String osFamily = computer.getMachineType().commandProcessor().osFamily();
             String message = result.success() ? "" : result.messageFor(osFamily);
 
             ModMessages.sendToPlayer(

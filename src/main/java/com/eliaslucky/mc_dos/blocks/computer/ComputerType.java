@@ -123,12 +123,4 @@ public enum ComputerType implements MachineType {
     @Override public Bios   bios()                     { return bios; }
     @Override public List<DriveBaySpec> driveBays()    { return driveBays; }
     @Override public Supplier<MachineConfig> defaultConfig() { return defaultConfig; }
-
-    /**
-     * A drive bay fitted to a machine.
-     */
-    public record DriveBaySpec(DriveType type,
-                               String dosLetter,
-                               String posixDevice,
-                               String posixMountPoint) {}
 }

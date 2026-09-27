@@ -3,15 +3,21 @@ package com.eliaslucky.mc_dos.blocks.computer;
 import com.eliaslucky.mc_dos.AllCreativeModeTabs;
 import com.eliaslucky.mc_dos.blocks.DirectionalHorizontalBlock;
 import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
+import com.eliaslucky.mc_dos.blocks.computer.drive.DriveBay;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
+import com.eliaslucky.mc_dos.items.RemovableMediaItem;
+import com.eliaslucky.mc_dos.network.ClientboundTerminalStatePacket;
+import com.eliaslucky.mc_dos.network.ModMessages;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -21,11 +27,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class IBMComputerBlock extends DirectionalHorizontalBlock implements EntityBlock, ICustomCreativeTab {
-	private final ComputerType computerType;
+	private final MachineType machineType;
 
-	public IBMComputerBlock(Properties properties, ComputerType computerType) {
+	public IBMComputerBlock(Properties properties, MachineType MachineType) {
 		super(properties);
-		this.computerType = computerType;
+		this.machineType = MachineType;
 	}
 	
 	@Override
@@ -36,7 +42,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 	@Override
 	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
 		ComputerBlockEntity be = new ComputerBlockEntity(pos, state);
-		//be.setComputerType(this.computerType);
+		//be.setMachineType(this.MachineType);
 		return be;
 	}
 
@@ -57,8 +63,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 		    boolean sneaking = player.isShiftKeyDown();
 
 		    // Insert
-		    if (sneaking && !held.isEmpty() &&
-		            held.getItem() instanceof RemovableMediaItem) {
+		    if (sneaking && !held.isEmpty() && held.getItem() instanceof RemovableMediaItem) {
 		        if (!level.isClientSide()) {
 		            if (computerBE.tryInsertMedia(held, player)) {
 		                player.displayClientMessage(
@@ -87,7 +92,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 		        return InteractionResult.sidedSuccess(level.isClientSide());
 		    }
 		    // Terminal
-			computerBE.setComputerType(this.computerType);
+			computerBE.setMachineType(this.machineType);
 
 			if (!computerBE.tryOccupy(player)) {
 				if (!level.isClientSide()) {
@@ -97,13 +102,17 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 			}
 			
 			if (!level.isClientSide()) {
-		        // Boot fresh every time the terminal opens.
-		        computerBE.getFileSystem().setCurrentPath(computerBE.getComputerType().defaultPath);
-		        computerBE.setChanged();
+				ModMessages.sendToPlayer(
+			            new ClientboundTerminalStatePacket(
+			                    pos,
+			                    computerBE.getBootState() == BootState.POST,
+			                    computerBE.getPostLines(),
+			                    5),
+			            (ServerPlayer) player);
 		    }
 
 			if (level.isClientSide()) {
-				net.minecraft.client.Minecraft.getInstance().setScreen(new ComputerTerminalScreen(pos, this.computerType));
+				net.minecraft.client.Minecraft.getInstance().setScreen(new ComputerTerminalScreen(pos, this.machineType));
 			}
 		}
 		return InteractionResult.sidedSuccess(level.isClientSide());
