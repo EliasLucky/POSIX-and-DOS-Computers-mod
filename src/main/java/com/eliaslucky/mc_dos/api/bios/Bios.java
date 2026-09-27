@@ -52,6 +52,9 @@ public interface Bios {
      * @return the version, e.g. {@code "Version C1.00"}
      */
     String version();
+    String manufacturer();
+    String releaseDate();
+    String copyright();
 
     /**
      * Run power-on self test.

@@ -179,6 +179,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
             case MENU: {
             	if (menuBar.keyPressed(key, scan, mods)) {
+                    if (isPrintableKey(key)) consumingMenuKeystroke = true;
                     if (!menuBar.isOpen()) mode = Mode.EDITOR;
                     return true;
                 }
@@ -308,18 +309,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
         immediate.appendOutput(headless.getOutput());
     }
-    
-    private void showSyntaxError(int errCode, String message) {
-        dialog = new DialogState()
-                .addLine("")
-                .addLine(message == null ? "Invalid syntax" : message)
-                .addLine("")
-                .addItem("OK",   "err.ok")
-                .addItem("Help", "err.help")
-                .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
-        pendingErrorCode = errCode;
-        mode = Mode.DIALOG;
-    }
 
     private int pendingErrorCode = 2;
 
@@ -336,23 +325,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
                 startRun();
                 return;
             case "help.survival":
-            	showSurvivalGuide()
-                return;
-            case "err.ok":
-                dialog = null;
-                mode = Mode.EDITOR;
-                return;
-
-            case "err.help":
-                dialog = new DialogState()
-                        .addLine("")
-                        .addLine("ERR code: " + pendingErrorCode)
-                        .addLine("")
-                        .addLine("Press ENTER to continue")
-                        .addLine("")
-                        .addItem("OK", "err.ok")
-                        .onClosed(() -> { dialog = null; mode = Mode.EDITOR; });
-                mode = Mode.DIALOG;
+            	showSurvivalGuide();
                 return;
             default:
                 statusMessage = "(action: " + action + ")";

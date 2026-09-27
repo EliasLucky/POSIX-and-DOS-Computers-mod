@@ -32,7 +32,9 @@ public class IbmAtBios implements Bios {
 
     @Override
     public String version() { return "Version C1.00"; }
-
+    @Override public String manufacturer() { return "IBM"; }
+    @Override public String releaseDate()  { return "02/21/1987"; }
+    @Override public String copyright()    { return "Copyright IBM Corp. 1981, 1984, 1986"; }
     @Override
     public List<String> runPost(ComputerBlockEntity machine, PeripheralBus bus, MachineConfig config) {
         List<String> out = new ArrayList<>();

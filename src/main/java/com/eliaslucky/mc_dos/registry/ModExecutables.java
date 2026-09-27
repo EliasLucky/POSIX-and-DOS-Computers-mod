@@ -63,7 +63,5 @@ public final class ModExecutables {
                 "\u007fELF /bin/sh\n",
                 (computer, args, file) ->
                         new ShellRunner(BourneV7Dialect.INSTANCE).run(computer, args));
-
-        // ... ls, cat, grep as needed later
     }
 }

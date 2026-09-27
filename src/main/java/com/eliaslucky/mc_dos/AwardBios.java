@@ -28,6 +28,9 @@ public class AwardBios implements Bios {
 
     @Override
     public String version() { return "v6.00PG"; }
+    @Override public String manufacturer() { return "Phoenix Technologies, LTD"; }
+    @Override public String releaseDate()  { return "05/14/2003"; }
+    @Override public String copyright()    { return "Copyright (C) 1984-2003, Phoenix Technologies, LTD"; }
 
     @Override
     public List<String> runPost(ComputerBlockEntity machine, PeripheralBus bus, MachineConfig config) {
