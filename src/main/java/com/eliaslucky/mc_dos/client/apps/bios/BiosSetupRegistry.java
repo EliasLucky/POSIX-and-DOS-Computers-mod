@@ -30,7 +30,7 @@ import java.util.Map;
  *
  * <p>If no setup screen is registered for an ID, the client prints a
  * diagnostic line rather than crashing. That gives a
- * clear signal that they forgot to register.
+ * clear signal that forgot to register.
  *
  * @since 1.5
  */

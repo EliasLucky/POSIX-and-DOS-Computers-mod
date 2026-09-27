@@ -56,16 +56,10 @@ public class ServerboundRequestBiosConfigPacket {
                 return;
             }
 
-            // Only honour the request during POST. If the machine has
-            // already left POST — because the countdown expired, the
-            // player pressed a key, or someone else opened SETUP first —
-            // ignore the request rather than reopening the screen.
             if (computer.getBootState() != BootState.POST) {
                 return;
             }
 
-            // Transition to SETUP so the shell stays inactive while the
-            // player is editing BIOS settings.
             computer.setBootState(BootState.SETUP);
 
             // Send the machine's current configuration and BIOS name.
@@ -75,6 +69,7 @@ public class ServerboundRequestBiosConfigPacket {
                             this.pos,
                             computer.getMachineConfig(),
                             computer.getComputerType().bios.name()),
+                    computer.getComputerType().bios.setupScreenId()),
                     player);
         });
         ctx.setPacketHandled(true);

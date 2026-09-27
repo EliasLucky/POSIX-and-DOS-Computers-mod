@@ -33,6 +33,7 @@ public class ClientboundBiosConfigPacket {
     public ClientboundBiosConfigPacket(FriendlyByteBuf buffer) {
         this.pos = buffer.readBlockPos();
         this.biosName = buffer.readUtf();
+        this.setupScreenId = buffer.readUtf();
 
         long time = buffer.readLong();
         MachineConfig.FloppyType floppyA = MachineConfig.FloppyType.values()[buffer.readByte()];
@@ -52,6 +53,7 @@ public class ClientboundBiosConfigPacket {
     public void encode(FriendlyByteBuf buffer) {
         buffer.writeBlockPos(pos);
         buffer.writeUtf(biosName);
+        buffer.writeUtf(setupScreenId);
 
         buffer.writeLong(config.systemTime());
         buffer.writeByte(config.floppyA().ordinal());
@@ -68,7 +70,7 @@ public class ClientboundBiosConfigPacket {
         NetworkEvent.Context ctx = contextSupplier.get();
         ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
             if (Minecraft.getInstance().screen instanceof ComputerTerminalScreen screen) {
-                screen.onBiosConfigReceived(config, biosName);
+                screen.onBiosConfigReceived(config, biosName,setupScreenId);
             }
         }));
         ctx.setPacketHandled(true);

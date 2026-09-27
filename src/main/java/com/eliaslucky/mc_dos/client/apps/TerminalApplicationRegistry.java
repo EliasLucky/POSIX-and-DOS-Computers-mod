@@ -19,11 +19,4 @@ public final class TerminalApplicationRegistry {
     public static AppFactory get(String name) {
         return REGISTRY.get(name.toUpperCase(Locale.ROOT));
     }
-
-    static {
-        register("QBASIC",     QBasicApplication::new);
-        register("QBASIC.EXE", QBasicApplication::new);
-        //register("GWBASIC",    GWBasicApplication::new);
-        // later: register("VI", ViApplication::new); etc.
-    }
 }

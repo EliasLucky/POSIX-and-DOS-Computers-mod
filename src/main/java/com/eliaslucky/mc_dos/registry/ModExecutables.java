@@ -5,6 +5,7 @@ import com.eliaslucky.mc_dos.api.exec.DosMZFormat;
 import com.eliaslucky.mc_dos.api.exec.ExecutableRegistry;
 import com.eliaslucky.mc_dos.api.exec.PosixElfFormat;
 import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
+import com.eliaslucky.mc_dos.blocks.computer.diag.MsdDataCollector;
 import com.eliaslucky.mc_dos.blocks.computer.processors.posix.ShellRunner;
 import com.eliaslucky.mc_dos.blocks.computer.shell.unix.BourneV7Dialect;
 
@@ -56,7 +57,12 @@ public final class ModExecutables {
                             : computer.getFileSystem().canonicalize(args);
                     return "APP_LAUNCH:GWBASIC:" + name + ":";
                 });
-
+        ExecutableRegistry.register("dos", "MSD.EXE", DosMZFormat.INSTANCE,
+                "MZ\u0090\u0000\u0003\u0000\u0000\u0000Microsoft Diagnostics\n",
+                (computer, args, file) -> {
+                    String report = MsdDataCollector.collect(computer);
+                    return "APP_LAUNCH:MSD::" + report;
+                });
         // POSIX (Linux / UNIX)
         // /bin/sh and /bin/bash take a script path and run it through ShellRunner.
         ExecutableRegistry.register("posix", "/BIN/SH", PosixElfFormat.INSTANCE,
