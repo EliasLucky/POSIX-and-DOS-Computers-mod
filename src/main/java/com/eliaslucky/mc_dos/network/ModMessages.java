@@ -44,6 +44,11 @@ public class ModMessages {
 				.encoder(ServerboundFileWritePacket::encode)
 				.consumerMainThread(ServerboundFileWritePacket::handle)
 				.add();
+		net.messageBuilder(ServerboundSkipPostPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+		        .decoder(ServerboundSkipPostPacket::new)
+		        .encoder(ServerboundSkipPostPacket::encode)
+		        .consumerMainThread(ServerboundSkipPostPacket::handle)
+		        .add();
 
 		// SERVER -> CLIENT
 		net.messageBuilder(ClientboundTerminalOutputPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
@@ -57,6 +62,17 @@ public class ModMessages {
         	.encoder(ClientboundFileWriteResultPacket::encode)
         	.consumerMainThread(ClientboundFileWriteResultPacket::handle)
         	.add();
+net.messageBuilder(ClientboundTerminalStatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+        .decoder(ClientboundTerminalStatePacket::new)
+        .encoder(ClientboundTerminalStatePacket::encode)
+        .consumerMainThread(ClientboundTerminalStatePacket::handle)
+        .add();
+
+net.messageBuilder(ClientboundBiosConfigPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+        .decoder(ClientboundBiosConfigPacket::new)
+        .encoder(ClientboundBiosConfigPacket::encode)
+        .consumerMainThread(ClientboundBiosConfigPacket::handle)
+        .add();
 	}
 
 	public static void sendToServer(Object message) {
