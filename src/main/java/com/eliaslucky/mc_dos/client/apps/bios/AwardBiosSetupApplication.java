@@ -6,6 +6,8 @@ import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.tui.TuiBox;
 import com.eliaslucky.mc_dos.client.tui.TuiDialog;
 import com.eliaslucky.mc_dos.client.tui.TuiScreen;
+import com.eliaslucky.mc_dos.client.tui.TuiTheme;
+import com.eliaslucky.mc_dos.client.tui.TuiThemes;
 import com.eliaslucky.mc_dos.network.ModMessages;
 import com.eliaslucky.mc_dos.network.ServerboundSaveBiosConfigPacket;
 
@@ -21,67 +23,39 @@ import java.util.function.Consumer;
 /**
  * Phoenix-Award BIOS v6.00PG SETUP screen.
  *
- * <p>Visual style matches the blue-on-blue Award BIOS that shipped on
- * Pentium-class motherboards from the late 1990s through the 2000s:
- * a yellow title bar, a tabbed menu strip, section headers with a
- * ▶ bullet, values in yellow, and a light gray "Item Help" panel on
- * the right.
+ * <p>Visual style and navigation model the firmware that shipped on
+ * Pentium-class motherboards between 2000 and 2005: a blue screen with
+ * a yellow title line, a gray tab strip across the top, section headers
+ * marked with a red ▶ arrow, item values in yellow, and a framed Item
+ * Help panel on the right.
  *
- * <p>Navigation follows the real BIOS: arrow keys move between items,
- * left/right switch tabs, Enter opens a picker, +/- or PgUp/PgDn
- * cycle values, F5 restores the config as it was when SETUP opened,
- * F6 loads fail-safe defaults, F7 loads optimized defaults, F10 saves
- * and exits, and Esc prompts to discard changes.
+ * <p>Every color comes from {@link TuiThemes#AWARD_SETUP}. To restyle
+ * the screen, edit that theme — nothing in this class is hardcoded to a
+ * specific palette. An addon that ships its own BIOS can substitute its
+ * own {@code TuiTheme} by assigning the {@link #theme} field before
+ * setup opens.
  *
- * <p>Only the fields the mod actually models are editable. Boot device
- * priority, USB controllers, power management, and the many toggles a
- * real BIOS exposed are absent because the machine has no hardware
- * behind them.
+ * <p>Navigation follows the real BIOS:
+ * <ul>
+ *   <li>↑ ↓ move between items, skipping section headers</li>
+ *   <li>← → switch tabs</li>
+ *   <li>Enter opens a picker dialog or activates an action</li>
+ *   <li>+ − / PgUp / PgDn cycle enum values in place</li>
+ *   <li>F5 restores the config as it was when SETUP opened</li>
+ *   <li>F6 loads fail-safe defaults, F7 optimized defaults</li>
+ *   <li>F10 saves and exits, Esc exits without saving</li>
+ * </ul>
  *
- * @since 1.
+ * @since 1.0
  */
 public class AwardBiosSetupApplication extends TerminalApplication {
-    // Colors
-    // Sampled from the Award BIOS v6.00PG default palette.
-
-    /** Blue background — the dominant color of the whole screen. */
-    private static final int BG         = 0xFF0000AA;
-
-    /** Yellow text used for the title bar, active tab values, and the like. */
-    private static final int TITLE_FG   = 0xFFFFFF55;
-
-    /** Inactive top-level tabs. */
-    private static final int TAB_INACT  = 0xFFFFFF55;
-
-    /** Active tab background. */
-    private static final int TAB_ACT_BG = 0xFFAAAAAA;
-
-    /** Active tab text. */
-    private static final int TAB_ACT_FG = 0xFF000000;
-
-    /** Section headers (with ▶ prefix) — cyan-yellow blend common in Award. */
-    private static final int SECTION_FG = 0xFF55FFFF;
-
-    /** Normal item label. */
-    private static final int LABEL_FG   = 0xFFFFFFFF;
-
-    /** Item value — always yellow in Award BIOS. */
-    private static final int VALUE_FG   = 0xFFFFFF55;
-
-    /** Selected row background. */
-    private static final int SEL_BG     = 0xFFAAAAAA;
-
-    /** Selected row text. */
-    private static final int SEL_FG     = 0xFF000000;
-
-    /** Item-help box border and text. */
-    private static final int HELP_FG    = 0xFFAAAAAA;
-
-    /** Footer bar. */
-    private static final int FOOT_BG    = 0xFFAAAAAA;
-
-    /** Footer bar text. */
-    private static final int FOOT_FG    = 0xFF000000;
+    // Theme
+    /**
+     * The active theme. All drawing reads colors from here, so swapping
+     * this field at construction re-skins the entire screen. Defaults to
+     * the shared Award preset in {@link TuiThemes}.
+     */
+    private final TuiTheme theme = TuiThemes.AWARD_SETUP;
 
     // Tabs
 
@@ -140,13 +114,13 @@ public class AwardBiosSetupApplication extends TerminalApplication {
 
     // State
 
-    /** The config as it was when SETUP opened  F5 restores it. */
+    /** The config as it was when SETUP opened — F5 restores it. */
     private final MachineConfig original;
 
     /** The working copy. Edits modify this. */
     private MachineConfig config;
 
-    /** BIOS name for the title. */
+    /** BIOS name for the title bar. */
     private final String biosName;
 
     private Tab activeTab = Tab.MAIN;
@@ -296,10 +270,9 @@ public class AwardBiosSetupApplication extends TerminalApplication {
     }
 
     // Rendering
-
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, appWidth, appHeight, BG);
+        g.fill(0, 0, appWidth, appHeight, theme.screenBg());
 
         drawTitleBar(g);
         drawMenuBar(g);
@@ -313,24 +286,25 @@ public class AwardBiosSetupApplication extends TerminalApplication {
     private void drawTitleBar(GuiGraphics g) {
         String title =
                 "CMOS Setup Utility - Copyright (C) 1984-2003 Award Software, Inc.";
-        drawDos(g, title, 2 * CELL_W, 0, TITLE_FG);
+        int pad = Math.max(0, (cols() - title.length()) / 2);
+        drawDos(g, title, pad * CELL_W, 0, theme.titleFg());
     }
 
     private void drawMenuBar(GuiGraphics g) {
         int col = 2;
+        int y = CELL_H;
         for (Tab tab : Tab.values()) {
             boolean active = (tab == activeTab);
             int labelLen = tab.label.length();
             int px = col * CELL_W;
-            int py = CELL_H;
 
             if (active) {
-                g.fill(px, py,
-                       px + labelLen * CELL_W, py + CELL_H,
-                       TAB_ACT_BG);
-                drawDos(g, tab.label, px, py, TAB_ACT_FG);
+                g.fill(px, y,
+                       px + labelLen * CELL_W, y + CELL_H,
+                       theme.highlightBg());
+                drawDos(g, tab.label, px, y, theme.highlightFg());
             } else {
-                drawDos(g, tab.label, px, py, TAB_INACT);
+                drawDos(g, tab.label, px, y, theme.titleFg());
             }
             col += labelLen + 2;
         }
@@ -347,7 +321,7 @@ public class AwardBiosSetupApplication extends TerminalApplication {
             switch (row.kind) {
                 case HEADER -> drawDos(g,
                         "\u25B6 " + row.label,
-                        2 * CELL_W, py, SECTION_FG);
+                        2 * CELL_W, py, theme.warning());
 
                 case ITEM -> {
                     boolean selected = (i == selectedRow);
@@ -355,11 +329,12 @@ public class AwardBiosSetupApplication extends TerminalApplication {
                     int pw = 76 * CELL_W;
 
                     if (selected) {
-                        g.fill(px, py, px + pw, py + CELL_H, SEL_BG);
+                        g.fill(px, py, px + pw, py + CELL_H,
+                               theme.highlightBg());
                     }
 
-                    int labelColor = selected ? SEL_FG : LABEL_FG;
-                    int valueColor = selected ? SEL_FG : VALUE_FG;
+                    int labelColor = selected ? theme.highlightFg() : theme.screenFg();
+                    int valueColor = selected ? theme.highlightFg() : theme.value();
 
                     drawDos(g, row.label, 2 * CELL_W, py, labelColor);
                     if (row.value != null) {
@@ -379,12 +354,13 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         int endRow   = rows() - 3;
         if (endRow <= startRow) return;
 
-        // Framed "Item Help" box on the right.
         TuiBox box = new TuiBox(startRow, startCol,
                                 endCol - startCol + 1,
                                 endRow - startRow + 1,
                                 TuiBox.Style.SINGLE);
-        box.titled("Item Help").border(HELP_FG).fill(-1);
+        box.titled("Item Help")
+           .border(theme.border())
+           .fill(theme.frameBg());
         box.render(g, this);
 
         Row selected = getSelectedRow();
@@ -394,7 +370,7 @@ public class AwardBiosSetupApplication extends TerminalApplication {
                 (startCol + 2) * CELL_W,
                 (startRow + 1) * CELL_H,
                 endCol - startCol - 3,
-                HELP_FG);
+                theme.screenFg());
     }
 
     private void drawWrappedText(GuiGraphics g, String text, int x, int y,
@@ -420,19 +396,17 @@ public class AwardBiosSetupApplication extends TerminalApplication {
 
     private void drawFooter(GuiGraphics g) {
         int y = (rows() - 1) * CELL_H;
-        g.fill(0, y, appWidth, y + CELL_H, FOOT_BG);
+        g.fill(0, y, appWidth, y + CELL_H, theme.statusBg());
 
         String hints = " \u2191\u2193\u2192\u2190:Move  Enter:Select  " +
                        "+/-/PU/PD:Value  F10:Save  ESC:Exit  F1:General Help  " +
                        "F5:Previous  F6:Fail-Safe  F7:Optimized ";
-        drawDos(g, hints, 0, y, FOOT_FG);
+        drawDos(g, hints, 0, y, theme.statusFg());
     }
 
     // Input
-
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        // Modal dialogs take precedence over everything else.
         if (widgets.getFocus() != null) {
             return widgets.keyPressed(key, scan, mods);
         }
@@ -456,7 +430,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
                 return true;
             }
             case GLFW.GLFW_KEY_F5 -> {
-                // Restore the config as it was when SETUP opened.
                 config = original;
                 rebuildRows();
                 selectFirstSelectable();
@@ -486,7 +459,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         return false;
     }
 
-    /** Move the selection by {@code delta} rows, skipping non-item rows. */
     private void moveSelection(int delta) {
         if (bodyRows.isEmpty()) return;
         int i = selectedRow;
@@ -501,7 +473,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         }
     }
 
-    /** Switch tabs and re-populate the body. */
     private void cycleTab(int delta) {
         Tab[] values = Tab.values();
         int idx = activeTab.ordinal() + delta;
@@ -512,7 +483,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         selectFirstSelectable();
     }
 
-    /** Handle Enter on the selected row. */
     private void activateSelected() {
         Row row = getSelectedRow();
         if (row == null || row.action == null) return;
@@ -559,7 +529,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         }
     }
 
-    /** +/- or PgUp/PgDn on a value item cycles to the next enum value. */
     private void cycleValue(int delta) {
         Row row = getSelectedRow();
         if (row == null || row.action == null) return;
@@ -595,7 +564,6 @@ public class AwardBiosSetupApplication extends TerminalApplication {
                 config = config.withPrimaryDisplay(v[next]);
                 rebuildRows();
             }
-            // action.* rows do not have values to cycle.
         }
     }
 
@@ -605,7 +573,8 @@ public class AwardBiosSetupApplication extends TerminalApplication {
     }
 
     // Pickers
-    private void showFloppyPicker(MachineConfig.FloppyType current, Consumer<MachineConfig.FloppyType> onPick) {
+    private void showFloppyPicker(MachineConfig.FloppyType current,
+                                   Consumer<MachineConfig.FloppyType> onPick) {
         TuiDialog dlg = new TuiDialog()
                 .addLine("")
                 .addLine("Select Floppy Drive Type:")
@@ -627,7 +596,8 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         widgets.setFocus(dlg);
     }
 
-    private void showDiskPicker(MachineConfig.DiskType current, Consumer<MachineConfig.DiskType> onPick) {
+    private void showDiskPicker(MachineConfig.DiskType current,
+                                 Consumer<MachineConfig.DiskType> onPick) {
         TuiDialog dlg = new TuiDialog()
                 .addLine("")
                 .addLine("Select Hard Disk Type:")
@@ -753,12 +723,10 @@ public class AwardBiosSetupApplication extends TerminalApplication {
         return bodyRows.get(selectedRow);
     }
 
-    /** Format as Award BIOS prints it: {@code "Fri, Nov 18 2005"}. */
     private static String awardDate(long millis) {
         return new SimpleDateFormat("EEE, MMM dd yyyy").format(new Date(millis));
     }
 
-    /** Format as Award BIOS prints it: {@code "12:34:56"}. */
     private static String awardTime(long millis) {
         return new SimpleDateFormat("HH:mm:ss").format(new Date(millis));
     }
