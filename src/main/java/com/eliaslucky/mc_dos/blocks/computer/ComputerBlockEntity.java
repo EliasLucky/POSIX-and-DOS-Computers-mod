@@ -1,6 +1,8 @@
 package com.eliaslucky.mc_dos.blocks.computer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -12,16 +14,31 @@ import com.eliaslucky.mc_dos.api.shell.Pipeline;
 import com.eliaslucky.mc_dos.api.shell.PipelineExecutor;
 import com.eliaslucky.mc_dos.api.shell.ShellDialect;
 import com.eliaslucky.mc_dos.api.shell.StreamResolver;
+import com.eliaslucky.mc_dos.blocks.computer.ComputerType.DriveBaySpec;
 import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
+import com.eliaslucky.mc_dos.blocks.computer.drive.DriveBay;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
+import com.eliaslucky.mc_dos.items.RemovableMediaItem;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
+/**
+ * The block entity for a computer block.
+ *
+ * <p>This is the machine. It owns the virtual filesystem, the
+ * environment variables, the kernel, the drive bays, the BIOS
+ * configuration, and the boot state. It runs entirely on the server
+ * side; the client is a terminal emulator that speaks to it through
+ * packets.
+ */
 public class ComputerBlockEntity extends BlockEntity {
 	private ComputerType computerType = ComputerType.IBM_PC_AT;
 	private final VirtualFileSystem fileSystem = new VirtualFileSystem();
@@ -31,7 +48,9 @@ public class ComputerBlockEntity extends BlockEntity {
 	private Kernel kernel;
 	private final List<DriveBay> driveBays = new ArrayList<>();
 	public List<DriveBay> driveBays() { return List.copyOf(driveBays); }
-
+	private MachineConfig machineConfig;
+	private BootState bootState = BootState.POST;
+	
 	public ComputerBlockEntity(BlockPos pos, BlockState state) {
 		super(AllBlockEntities.COMPUTER_PROGRAMMABLE_BLOCK.get(), pos, state);
 	}
@@ -43,7 +62,13 @@ public class ComputerBlockEntity extends BlockEntity {
 	public ComputerType getComputerType() {
 		return computerType;
 	}
-
+	/**
+     * Bind this machine to a computer type. Called when the block is
+     * placed and again on world load. Sets up files, environment, and
+     * drive bays on first call; boots the BIOS on the server.
+     *
+     * @param type the machine type
+     */
 	public void setComputerType(ComputerType type) {
 		this.computerType = type;
 		fileSystem.setPolicy(type.commandProcessor.fileNamePolicy());
@@ -52,6 +77,10 @@ public class ComputerBlockEntity extends BlockEntity {
 			setupEnvironment();
 			initializedDefaults = true;	
 		}
+
+        if (machineConfig == null) {
+            machineConfig = type.defaultConfig.get();
+        }
 		if (!level.isClientSide()) {
 		    bootKernel();
 		}
@@ -131,6 +160,16 @@ public class ComputerBlockEntity extends BlockEntity {
 		environment.put("PATH", computerType.commandProcessor.defaultPath());
 		environment.put("PROMPT", "$P$G");
 }
+    /**
+     * @return the machine's BIOS configuration, or {@code null} if the
+     *         machine has never been booted
+     */
+    public MachineConfig getMachineConfig() { return machineConfig; }
+
+    public BootState getBootState() { return bootState; }
+
+    public List<String> getPostLines() { return List.copyOf(postLines); }
+
 	public DriveBay driveBay(int index) {
 	    return (index >= 0 && index < driveBays.size()) ? driveBays.get(index) : null;
 	}
