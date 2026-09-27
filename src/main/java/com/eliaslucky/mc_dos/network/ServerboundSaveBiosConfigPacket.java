@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.network;
 
+import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.blocks.computer.BootState;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerBlockEntity;
 
@@ -8,45 +9,73 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Sent from client to server when the player presses the SETUP key
- * during POST.
+ * Sent from client to server when the player saves changes in a BIOS
+ * SETUP screen.
  *
- * <p>The server replies with a {@link ClientboundBiosConfigPacket}
- * carrying the machine's current {@link MachineConfig} and the
- * identifier of the BIOS's setup screen. The client uses the
- * identifier to look up the correct {@code TerminalApplication} in
- * {@code BiosSetupRegistry}, so no BIOS name matching is needed on the
- * client.
+ * <p>The server stores the new {@link MachineConfig} on the block
+ * entity, moves the machine into {@link BootState#RUNNING}, and sends
+ * back a fresh {@link ClientboundTerminalStatePacket} so the client
+ * knows the POST phase is over and the shell prompt can appear.
  *
- * <p>State transition: {@code POST} → {@code SETUP}. If the machine is
- * not in POST — because the countdown already expired, the player
- * skipped it, or another player already opened SETUP — the request is
- * ignored. That matches the real BIOS behaviour of only honouring the
- * DEL key during the POST window.
+ * <p>If the machine is not currently in {@link BootState#SETUP} — for
+ * example, another player has already dismissed the setup screen or
+ * the block was unloaded — the request is silently ignored.
  *
  * @since 1.0
  */
-public class ServerboundRequestBiosConfigPacket {
+public class ServerboundSaveBiosConfigPacket {
 
-    /** The block position of the computer whose BIOS is being opened. */
     private final BlockPos pos;
+    private final MachineConfig config;
 
     /**
-     * @param pos the computer block position
+     * @param pos    the computer block whose config is being saved
+     * @param config the new configuration
      */
-    public ServerboundRequestBiosConfigPacket(BlockPos pos) {
+    public ServerboundSaveBiosConfigPacket(BlockPos pos, MachineConfig config) {
         this.pos = pos;
+        this.config = config;
     }
 
-    public ServerboundRequestBiosConfigPacket(FriendlyByteBuf buffer) {
+    public ServerboundSaveBiosConfigPacket(FriendlyByteBuf buffer) {
         this.pos = buffer.readBlockPos();
+
+        long time = buffer.readLong();
+        MachineConfig.FloppyType floppyA =
+                MachineConfig.FloppyType.values()[buffer.readByte()];
+        MachineConfig.FloppyType floppyB =
+                MachineConfig.FloppyType.values()[buffer.readByte()];
+        MachineConfig.DiskType hd1 =
+                MachineConfig.DiskType.values()[buffer.readByte()];
+        MachineConfig.DiskType hd2 =
+                MachineConfig.DiskType.values()[buffer.readByte()];
+        int baseMem = buffer.readVarInt();
+        int extMem  = buffer.readVarInt();
+        boolean coprocessor = buffer.readBoolean();
+        MachineConfig.DisplayType display =
+                MachineConfig.DisplayType.values()[buffer.readByte()];
+
+        this.config = new MachineConfig(
+                time, floppyA, floppyB, hd1, hd2,
+                baseMem, extMem, coprocessor, display);
     }
 
     public void encode(FriendlyByteBuf buffer) {
         buffer.writeBlockPos(this.pos);
+
+        buffer.writeLong(this.config.systemTime());
+        buffer.writeByte(this.config.floppyA().ordinal());
+        buffer.writeByte(this.config.floppyB().ordinal());
+        buffer.writeByte(this.config.hardDisk1().ordinal());
+        buffer.writeByte(this.config.hardDisk2().ordinal());
+        buffer.writeVarInt(this.config.baseMemoryKb());
+        buffer.writeVarInt(this.config.extendedMemoryKb());
+        buffer.writeBoolean(this.config.mathCoprocessor());
+        buffer.writeByte(this.config.primaryDisplay().ordinal());
     }
 
     public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
@@ -60,26 +89,14 @@ public class ServerboundRequestBiosConfigPacket {
                 return;
             }
 
-            // Only honour the request during POST. Anything else means
-            // the window has already passed, or someone else is in SETUP.
-            if (computer.getBootState() != BootState.POST) {
+            if (computer.getBootState() != BootState.SETUP) {
                 return;
             }
 
-            // Transition to SETUP so the shell stays inactive while the
-            // player is editing BIOS settings.
-            computer.setBootState(BootState.SETUP);
+            computer.setMachineConfig(this.config);
+            computer.setBootState(BootState.RUNNING);
 
-            // Reply with the machine's configuration and the identifier
-            // of the setup screen the client should open. The BIOS knows
-            // its own screen ID — that's the whole point of the field.
-            ModMessages.sendToPlayer(
-                    new ClientboundBiosConfigPacket(
-                            this.pos,
-                            computer.getMachineConfig(),
-                            computer.getMachineType().bios().name(),
-                            computer.getMachineType().bios().setupScreenId()),
-                    player);
+            ModMessages.sendToPlayer(new ClientboundTerminalStatePacket(this.pos, false,  List.of(), 0), player);
         });
         ctx.setPacketHandled(true);
     }

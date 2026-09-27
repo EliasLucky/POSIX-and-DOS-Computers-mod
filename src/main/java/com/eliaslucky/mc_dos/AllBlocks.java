@@ -11,6 +11,8 @@ import net.minecraftforge.registries.RegistryObject;
 import com.eliaslucky.mc_dos.blocks.SquareTableBlock;
 import com.eliaslucky.mc_dos.blocks.computer.ComputerType;
 import com.eliaslucky.mc_dos.blocks.computer.IBMComputerBlock;
+import com.eliaslucky.mc_dos.blocks.peripheral.mccmd.MinecraftCommandTranslatorBlock;
+import com.eliaslucky.mc_dos.blocks.peripheral.mccmd.MinecraftCommandTranslatorBlockEntity;
 import com.eliaslucky.mc_dos.blocks.ChairBlock;
 import com.eliaslucky.mc_dos.blocks.DeskCabinetBlock;
 
@@ -57,4 +59,13 @@ public class AllBlocks {
 				.noOcclusion(), ComputerType.IBM_PC_AT
 			)
 		);
+	public static final RegistryObject<Block> HARDWARE_LPC_MCCMD_BLOCK = BLOCKS.register("hardware_lpc_mccmd",
+			() -> new MinecraftCommandTranslatorBlock(BlockBehaviour.Properties.of()
+				.mapColor(MapColor.STONE)
+				.strength(2.0F,2.0F)
+				.sound(SoundType.STONE)
+				.noOcclusion()
+			)
+		);
+
 }

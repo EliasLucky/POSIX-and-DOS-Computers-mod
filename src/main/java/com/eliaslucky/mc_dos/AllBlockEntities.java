@@ -15,10 +15,10 @@ public class AllBlockEntities {
 		() -> BlockEntityType.Builder.of(ComputerBlockEntity::new, AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()).build(null)
 	);
 	
-	public static final RegistryObject<BlockEntityType<ComputerBlockEntity>> HARDWARE_LPC_MCCMD_BLOCK = BLOCK_ENTITIES.register("hardware_lpc_mccmd",
+	public static final RegistryObject<BlockEntityType<MinecraftCommandTranslatorBlockEntity>> HARDWARE_LPC_MCCMD_BLOCK = BLOCK_ENTITIES.register("hardware_lpc_mccmd",
             () -> BlockEntityType.Builder.of(
                     MinecraftCommandTranslatorBlockEntity::new,
-                    AllBlocks.MCCMD_BLOCK.get()
+                    AllBlocks.HARDWARE_LPC_MCCMD_BLOCK.get()
             ).build(null)
 		);
 }
