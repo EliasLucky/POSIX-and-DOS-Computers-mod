@@ -97,7 +97,8 @@ public class ComputerTerminalScreen extends Screen {
 				postPhase = false;
 				ModMessages.sendToServer(new ServerboundSkipPostPacket(this.pos));
 			} else {
-				String msg = "Press DEL to enter SETUP ... " + remaining;
+				Component msg = Component.literal("Press DEL to enter SETUP ... " + remaining)
+				        .withStyle(DOS_STYLE);
 				int w = this.font.width(msg);
 				int y = this.height - MARGIN - LINE_HEIGHT;
 				guiGraphics.drawString(this.font, msg, this.width - MARGIN - w, y, textColor, false);

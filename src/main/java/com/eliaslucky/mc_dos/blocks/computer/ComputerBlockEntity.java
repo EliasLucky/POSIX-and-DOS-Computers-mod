@@ -42,7 +42,6 @@ import net.minecraft.world.level.block.state.BlockState;
  * packets.
  */
 public class ComputerBlockEntity extends BlockEntity {
-
     private MachineType machineType = ComputerType.IBM_PC_AT;
     private final VirtualFileSystem fileSystem = new VirtualFileSystem();
     private boolean initializedDefaults = false;
@@ -62,7 +61,6 @@ public class ComputerBlockEntity extends BlockEntity {
     }
 
     // Accessors
-
     public VirtualFileSystem getFileSystem() { return fileSystem; }
     public MachineType getMachineType()      { return machineType; }
     public Kernel getKernel()                { return kernel; }
@@ -81,7 +79,7 @@ public class ComputerBlockEntity extends BlockEntity {
     /**
      * Bind this machine to a machine type. Called when the block is
      * placed and again on world load. Sets up files, environment, and
-     * drive bays on first call; boots the BIOS on the server.
+     * drive bays on first call.
      *
      * @param type the machine type
      */
@@ -99,13 +97,29 @@ public class ComputerBlockEntity extends BlockEntity {
         if (machineConfig == null) {
             machineConfig = type.defaultConfig().get();
         }
-
-        if (level != null && !level.isClientSide()) {
-            bootFromBios();
-        }
         setChanged();
     }
-
+    /**
+     * Power the machine on. Runs POST, boots the kernel, and moves the
+     * boot state to {@link BootState#POST}.
+     *
+     * <p>Called every time the terminal is opened. A real machine's POST
+     * only runs on power-on, and opening the terminal is the mod's
+     * equivalent of that event.
+     *
+     * <p>Safe to call repeatedly. On a machine that was already running,
+     * the kernel is shut down and re-created, and POST re-runs from the
+     * top. "cold boot" behaviour of pressing the reset
+     * button.
+     */
+    public void powerOn() {
+        if (machineType == null) return;
+        if (machineConfig == null) {
+            machineConfig = machineType.defaultConfig().get();
+        }
+        bootState = BootState.POST;
+        bootFromBios();
+    }
     public void setBootState(BootState state) {
         this.bootState = state;
         setChanged();
@@ -156,6 +170,7 @@ public class ComputerBlockEntity extends BlockEntity {
     private void setupDefaultFiles() {
         VirtualFileSystem vfs = fileSystem;
         vfs.getRoot().children.clear();
+        VirtualFileSystem.Node primaryRoot = new VirtualFileSystem.Node("/", true);
 
         ICommandProcessor proc = machineType.commandProcessor();
 
@@ -193,7 +208,11 @@ public class ComputerBlockEntity extends BlockEntity {
             }
             dir.addChild(node);
         }
-
+     // Mount it at the primary mount point for the OS family.
+        // DOS: "C:", POSIX: "/"
+        String mountId = machineType.defaultPath().startsWith("/") ? "/" : "C:";
+        fileSystem.mount(mountId, primaryRoot, false, "primary volume",
+                         /*capacity: unlimited*/ 0, 0);
         vfs.setCurrentPath(machineType.defaultPath());
     }
 
@@ -403,9 +422,6 @@ public class ComputerBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level != null && !level.isClientSide()) {
-            bootFromBios();
-        }
     }
 
     @Override

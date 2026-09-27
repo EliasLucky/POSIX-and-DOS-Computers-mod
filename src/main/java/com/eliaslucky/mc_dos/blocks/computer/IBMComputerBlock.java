@@ -42,7 +42,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 	@Override
 	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
 		ComputerBlockEntity be = new ComputerBlockEntity(pos, state);
-		//be.setMachineType(this.MachineType);
+		be.setMachineType(this.machineType);
 		return be;
 	}
 
@@ -102,6 +102,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 			}
 			
 			if (!level.isClientSide()) {
+			    computerBE.powerOn();
 				ModMessages.sendToPlayer(
 			            new ClientboundTerminalStatePacket(
 			                    pos,

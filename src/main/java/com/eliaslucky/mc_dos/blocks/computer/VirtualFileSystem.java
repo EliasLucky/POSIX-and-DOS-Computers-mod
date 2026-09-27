@@ -90,7 +90,7 @@ public class VirtualFileSystem {
 	            String rest = clean.substring(best.length());
 	            return resolveFrom(m.rootNode(), rest, policy);
 	        }
-	        return resolveFrom(root, clean, policy);
+	        return null;
 	    }
 
 	    // Relative path from currentDir
@@ -122,11 +122,6 @@ public class VirtualFileSystem {
 	    // Find the topmost ancestor.
 	    Node top = node;
 	    while (top.parent != null) top = top.parent;
-
-	    // Primary tree: existing behavior.
-	    if (top == root) {
-	        return buildPathFrom(node, root, policy.pathSeparator(), policy.rootPrefix());
-	    }
 
 	    // Mounted tree: find which mount owns it.
 	    for (Mount m : mounts.values()) {
@@ -299,7 +294,11 @@ public class VirtualFileSystem {
 	}
 	public CompoundTag serializeNBT() {
 		CompoundTag tag = new CompoundTag();
-		tag.put("Root", root.save());
+		Mount primary = findPersistentMount();
+	    if (primary != null) {
+	        tag.putString("PrimaryMountId", primary.id());
+	        tag.put("PrimaryTree", primary.rootNode().save());
+	    }
 		tag.putString("CurrentPath", currentPath);
 		return tag;
 	}
