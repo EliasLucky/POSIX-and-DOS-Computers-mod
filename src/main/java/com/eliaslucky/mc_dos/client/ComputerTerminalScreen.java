@@ -39,7 +39,8 @@ public class ComputerTerminalScreen extends Screen {
 	private final List<String> history = new ArrayList<>();
 	private final StringBuilder inputBuffer = new StringBuilder();
 	private String activePath;
-	private boolean postPhase = false;
+	private boolean postPhase = true;
+	private boolean skipRequested = false;
 	private long	postStartMillis = 0;
 	private int		postCountdownSeconds = 5;
 	private static final int MARGIN = 10;
@@ -78,11 +79,13 @@ public class ComputerTerminalScreen extends Screen {
 		for (int i = 0; i < history.size(); i++) {
 			String line = history.get(i);
 
-			if (postPhase && i == lastPromptIndex) {
+			if (postPhase && !skipRequested) {
 				long elapsed = System.currentTimeMillis() - postStartMillis;
 				int remaining = postCountdownSeconds - (int)(elapsed/1000);
-				if (remaining > 0) {
-					line = line + " ... " + remaining;
+				line = line + " ... " + remaining;
+				if (remaining <= 0) {
+					skipRequested = true;
+					ModMessages.sendToServer(new ServerboundSkipPostPacket(this.pos));
 				}
 			}
 			if (line.isEmpty()) {
@@ -125,13 +128,15 @@ public class ComputerTerminalScreen extends Screen {
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (postPhase) {
+			if (skipRequested) return true;
+			skipRequested = true;
 			if (keyCode == GLFW.GLFW_KEY_DELETE) {
-				postPhase = false;
 				ModMessages.sendToServer(new ServerboundRequestBiosConfigPacket(pos));
-				return true;
 			}
-			postPhase = false;
-			ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
+			else {
+				ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
+			}
+			return true;
 		}
 		if (activeApp != null) {
 			if (activeApp.keyPressed(keyCode, scanCode, modifiers)) return true;
@@ -149,9 +154,7 @@ public class ComputerTerminalScreen extends Screen {
 			return true;
 		} 
 		else if (keyCode == GLFW.GLFW_KEY_BACKSPACE && inputBuffer.length() > 0) {
-			if (inputBuffer.length() > 0) {
-				inputBuffer.deleteCharAt(inputBuffer.length() - 1);
-			}
+			inputBuffer.deleteCharAt(inputBuffer.length() - 1);
 			return true;
 		}
 		else if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -278,10 +281,14 @@ public class ComputerTerminalScreen extends Screen {
 			if (!wasInPost) {
 				this.postStartMillis = System.currentTimeMillis();
 				this.postCountdownSeconds = countdownSeconds;
+				this.skipRequested = false;
 			}
 			history.clear();
 			for (String line : postLines) history.add(line);
 			history.add("");
+		}
+		else {
+			this.skipRequested = false;
 		}
 	}
 

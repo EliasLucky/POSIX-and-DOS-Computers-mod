@@ -60,6 +60,8 @@ public class ServerboundRequestTerminalStatePacket {
 				return;
 			}
 
+			computer.powerOn();
+
 			// Reply with the machine's current state.
 			ModMessages.sendToPlayer(
 					new ClientboundTerminalStatePacket(

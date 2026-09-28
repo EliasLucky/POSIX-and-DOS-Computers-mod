@@ -98,7 +98,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 			}
 			
 			if (!level.isClientSide()) {
-				computerBE.powerOn();
+				
 			}
 
 			if (level.isClientSide()) {
