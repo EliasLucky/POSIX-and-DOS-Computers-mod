@@ -30,6 +30,7 @@ public class TuiBox implements TuiWidget {
     private String title;
     private int borderColor;
     private int bgColor;
+    private boolean filled = true;
 
     /**
      * @param row    top-left row in cells
@@ -47,6 +48,7 @@ public class TuiBox implements TuiWidget {
         this.title = null;
         this.borderColor = TuiPalette.BORDER;
         this.bgColor = TuiPalette.FRAME_BG;
+        this.filled = true;
     }
 
     /**
@@ -73,8 +75,16 @@ public class TuiBox implements TuiWidget {
      * @param c a colour, or {@code -1} for no fill
      * @return this box, for chaining
      */
-    public TuiBox fill(int c) { this.bgColor = c; return this; }
-
+    public TuiBox fill(int c) { this.bgColor = c;this.filled = true; return this; }
+    /**
+     * Leave the interior untouched so whatever is drawn underneath shows
+     * through. Use for boxes like the BIOS Item Help panel that sit on an
+     * already-painted background.
+     */
+    public TuiBox transparent() {
+        this.filled = false;
+        return this;
+    }
     @Override public int row()    { return row; }
     @Override public int col()    { return col; }
     @Override public int width()  { return width; }
@@ -88,7 +98,7 @@ public class TuiBox implements TuiWidget {
         int ph = height * TerminalApplication.CELL_H;
 
         // Interior fill (below the border glyphs).
-        if (bgColor >= 0) {
+        if (filled) {
             g.fill(px + TerminalApplication.CELL_W,
                     py + TerminalApplication.CELL_H,
                     px + pw - TerminalApplication.CELL_W,

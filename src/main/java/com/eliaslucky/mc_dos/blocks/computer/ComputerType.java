@@ -38,7 +38,6 @@ public enum ComputerType implements MachineType {
             "DOS/",
             "DOS/QBASIC.EXE",
             "DOS/EDIT.COM",
-            "DOS/GWBASIC.EXE",
             "DOS/MSD.EXE"
         ),
         new Dos6CommandProcessor(),

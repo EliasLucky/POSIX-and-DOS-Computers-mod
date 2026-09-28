@@ -78,6 +78,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     	    g.fill(0, 0, appWidth, appHeight, DosPalette.BLACK);
     	    displayMode.render(g, 0, 0, appWidth, appHeight);
     	    renderFooter(g);
+            menuBar.renderOverlay(g, this);
     	    return;
     	}
 
@@ -89,6 +90,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         renderDivider(g);
         renderFooter(g);
         overlay.render(g, this);
+        menuBar.renderOverlay(g, this);
     }
     
     @Override
@@ -140,7 +142,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         boolean isAltKey = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
         boolean altMod   = (mods & GLFW.GLFW_MOD_ALT) != 0;
         altHeld = isAltKey || altMod;
-        consumingMenuKeystroke = false;
 
         switch (mode) {
 	        case RUNNING:
@@ -193,16 +194,20 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
             case EDITOR:
             	if (overlay.keyPressed(key, scan, mods)) return true;
-                if ((mods & GLFW.GLFW_MOD_ALT) != 0) {
-                    int letter = letterFromKey(key);
-                    if (letter >= 0 && menuBar.openByMnemonic((char) letter)) {
-                        mode = Mode.MENU;
-                        return true;
+            	if (isAltKey) {
+                    if (menuBar.handleAltKey(true)) {
+                        mode = menuBar.isOpen() ? Mode.MENU : Mode.EDITOR;
                     }
-                    if (isAltKey) {
-                        menuBar.open();
-                        mode = Mode.MENU;
-                        return true;
+                    return true;
+                }
+                if (altMod) {
+                    int letter = letterFromKey(key);
+                    if (letter >= 0) {
+                        menuBar.openByMnemonic((char) letter);
+                        if (menuBar.isOpen()) {
+                            mode = Mode.MENU;
+                            return true;
+                        }
                     }
                     return false;
                 }
@@ -248,6 +253,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     public boolean keyReleased(int key, int scan, int mods) {
         if (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT) {
             altHeld = false;
+            menuBar.handleAltKey(false);
         }
         return super.keyReleased(key, scan, mods);
     }
@@ -317,7 +323,11 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         mode = Mode.EDITOR;
         switch (action) {
             case "file.exit":
-            	pendingExit = true;
+            	if (modified) {
+                    showSaveChangesPrompt();
+                } else {
+                    pendingExit = true;
+                }
                 return;
             case "file.save":
                 saveFile();
@@ -335,6 +345,10 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 
     @Override
     public boolean charTyped(char cp, int mods) {
+        if (consumingMenuKeystroke) {
+            consumingMenuKeystroke = false;
+            return true;
+        }
     	// RUNNING: feed INKEY$ or the INPUT buffer, depending on state.
         if (mode == Mode.RUNNING && host != null) {
             if (cp < 32 || cp == 127) return true;
@@ -349,8 +363,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         }
 
         if (mode == Mode.RUN_OUTPUT) return true;
-
-        if (consumingMenuKeystroke) { consumingMenuKeystroke = false; return true; }
         if (mode == Mode.MENU)   return true;
         if (mode == Mode.DIALOG) return true;
 
@@ -476,7 +488,63 @@ public class QBasicApplication extends AbstractEditorApplication implements File
         showOverlay(dlg);
         mode = Mode.DIALOG;
     }
+    private void showSaveChangesPrompt() {
+        TuiDialog dlg = new TuiDialog()
+                .addLine("")
+                .addLine("Loaded file is not saved. Save it now?")
+                .addLine("")
+                .addItem("Yes",    "save.yes")
+                .addItem("No",     "save.no")
+                .addItem("Cancel", "save.cancel")
+                .addItem("Help",   "save.help")
+                .horizontal();
 
+        dlg.onAction(a -> {
+            dismissOverlay(dlg);
+            switch (a) {
+                case "save.yes":
+                    saveFile();
+                    pendingExit = true;
+                    break;
+                case "save.no":
+                    pendingExit = true;
+                    break;
+                case "save.cancel":
+                    mode = Mode.EDITOR;
+                    break;
+                case "save.help":
+                    showSaveHelpDialog();
+                    break;
+            }
+        });
+        dlg.onCancel(() -> { dismissOverlay(dlg); mode = Mode.EDITOR; });
+
+        showOverlay(dlg);
+        mode = Mode.DIALOG;
+    }
+
+    private void showSaveHelpDialog() {
+        TuiDialog help = new TuiDialog()
+                .addLine("")
+                .addLine("Save changes?")
+                .addLine("")
+                .addLine("Yes     Save and exit")
+                .addLine("No      Exit without saving")
+                .addLine("Cancel  Return to the editor")
+                .addLine("")
+                .addItem("OK", "help.ok");
+
+        help.onAction(a -> {
+            dismissOverlay(help);
+            showSaveChangesPrompt();
+        });
+        help.onCancel(() -> {
+            dismissOverlay(help);
+            showSaveChangesPrompt();
+        });
+
+        showOverlay(help);
+    }
     @Override
     public String getTitle() { return "QBASIC - " + filePath; }
 }

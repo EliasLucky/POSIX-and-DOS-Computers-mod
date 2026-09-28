@@ -49,7 +49,7 @@ public class TuiMenu implements TuiWidget {
     private int selectedMenu = -1;
     private int selectedItem = -1;
     private Consumer<String> onAction;
-
+    private boolean altWasDown = false;
     /**
      * @param row   the row the menu bar occupies (usually 0)
      * @param menus the menu tree
@@ -157,25 +157,58 @@ public class TuiMenu implements TuiWidget {
                     (dx + w) * TerminalApplication.CELL_W,
                     (dy + h) * TerminalApplication.CELL_H,
                     TuiPalette.FRAME_BG);
-
-            for (int i = 0; i < m.items().size(); i++) {
-                Item it = m.items().get(i);
-                int iy = (dy + 1 + i) * TerminalApplication.CELL_H;
-                boolean hot = i == selectedItem;
-
-                if (hot) {
-                    g.fill(dx * TerminalApplication.CELL_W, iy,
-                            (dx + w) * TerminalApplication.CELL_W,
-                            iy + TerminalApplication.CELL_H,
-                            TuiPalette.HIGHLIGHT_BG);
-                }
-                app.drawDos(g, it.label(),
-                        (dx + 1) * TerminalApplication.CELL_W, iy,
-                        hot ? TuiPalette.HIGHLIGHT_FG : TuiPalette.TITLE_FG);
-            }
         }
     }
+    /**
+     * Draw the open dropdown, if any. Call <em>after</em> every other
+     * render method on the screen so the dropdown sits above the header,
+     * editor, and footer.
+     */
+    public void renderOverlay(GuiGraphics g, TerminalApplication app) {
+        if (!active || selectedMenu < 0) return;
 
+        Menu m = menus.get(selectedMenu);
+        int maxLen = m.label().length();
+        for (Item it : m.items()) maxLen = Math.max(maxLen, it.label().length());
+        int w = maxLen + 4;
+        int h = m.items().size() + 2;
+
+        int dx = 1;
+        for (int i = 0; i < selectedMenu; i++) {
+            dx += menus.get(i).label().length() + 3;
+        }
+        int dy = row + 1;
+
+        // Shadow
+        g.fill((dx + 1) * TerminalApplication.CELL_W,
+               (dy + 1) * TerminalApplication.CELL_H,
+               (dx + w + 1) * TerminalApplication.CELL_W,
+               (dy + h + 1) * TerminalApplication.CELL_H,
+               0xFF000000);
+
+        // Body — filled, so nothing underneath leaks through.
+        g.fill(dx * TerminalApplication.CELL_W,
+               dy * TerminalApplication.CELL_H,
+               (dx + w) * TerminalApplication.CELL_W,
+               (dy + h) * TerminalApplication.CELL_H,
+               TuiPalette.FRAME_BG);
+
+        for (int i = 0; i < m.items().size(); i++) {
+            Item it = m.items().get(i);
+            int iy = (dy + 1 + i) * TerminalApplication.CELL_H;
+            boolean hot = i == selectedItem;
+
+            if (hot) {
+                g.fill(dx * TerminalApplication.CELL_W, iy,
+                       (dx + w) * TerminalApplication.CELL_W,
+                       iy + TerminalApplication.CELL_H,
+                       TuiPalette.HIGHLIGHT_BG);
+            }
+            app.drawDos(g, it.label(),
+                    (dx + 1) * TerminalApplication.CELL_W, iy,
+                    hot ? TuiPalette.HIGHLIGHT_FG : TuiPalette.TITLE_FG);
+        }
+    }
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (!active) return false;
@@ -223,6 +256,39 @@ public class TuiMenu implements TuiWidget {
             }
             // Fall back to top-level mnemonics.
             return openByMnemonic(c);
+        }
+        return false;
+    }
+    /**
+     * Handle an ALT key state change from the app. Call from both
+     * {@code keyPressed} and {@code keyReleased}:
+     *
+     * <pre>{@code
+     * boolean isAlt = (key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT);
+     * if (isAlt && menuBar.handleAltKey(pressed)) {
+     *     mode = menuBar.isOpen() ? Mode.MENU : Mode.EDITOR;
+     *     return true;
+     * }
+     * }</pre>
+     *
+     * <p>Only the rising edge of ALT toggles the menu. Falling edges just
+     * clear the internal flag, so the next press is another rising edge.
+     *
+     * @param currentlyDown whether ALT is down right now
+     * @return {@code true} if the menu was toggled
+     */
+    public boolean handleAltKey(boolean currentlyDown) {
+        if (currentlyDown && !altWasDown) {
+            altWasDown = true;
+            if (active) {
+                close();
+            } else {
+                open();
+            }
+            return true;
+        }
+        if (!currentlyDown) {
+            altWasDown = false;
         }
         return false;
     }
