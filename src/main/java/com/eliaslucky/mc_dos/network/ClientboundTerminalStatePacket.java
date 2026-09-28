@@ -57,7 +57,7 @@ public class ClientboundTerminalStatePacket {
 		NetworkEvent.Context ctx = contextSupplier.get();
 		ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
 			if (Minecraft.getInstance().screen instanceof ComputerTerminalScreen screen) {
-				screen.onTerminalState(postPhase, postLines, countdownSeconds);
+				screen.onTerminalState(postPhase, postLines, countdownSeconds, currentPath);
 			}
 		}));
 		ctx.setPacketHandled(true);

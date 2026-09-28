@@ -40,8 +40,8 @@ public class ComputerTerminalScreen extends Screen {
 	private final StringBuilder inputBuffer = new StringBuilder();
 	private String activePath;
 	private boolean postPhase = false;
-	private long    postStartMillis = 0;
-	private int     postCountdownSeconds = 5;
+	private long	postStartMillis = 0;
+	private int		postCountdownSeconds = 5;
 	private static final int MARGIN = 10;
 	private static final int LINE_HEIGHT = 16;
 
@@ -50,7 +50,7 @@ public class ComputerTerminalScreen extends Screen {
 		this.pos = pos;
 		this.MachineType = MachineType;
 		this.activePath = MachineType.defaultPath();
-	    ModMessages.sendToServer(new ServerboundRequestTerminalStatePacket(pos));
+		ModMessages.sendToServer(new ServerboundRequestTerminalStatePacket(pos));
 	}
 	
 	@Override
@@ -68,7 +68,23 @@ public class ComputerTerminalScreen extends Screen {
 		int maxLineWidth = Math.max(50, this.width - (MARGIN * 2));
 
 		List<FormattedCharSequence> wrappedLines = new ArrayList<>();
-		for (String line : history) {
+		int lastPromptIndex = -1;
+		for (int = 0; i < history.size(); i++) {
+			String line = history.get(i);
+			if (!line.isEmpty() && line.contains("Press")) {
+				lastPromptIndex = i;
+			}
+		}
+		for (int = 0; i < history.size(); i++) {
+			String line = history.get(i);
+
+			if (postPhase && i == lastPromptIndex) {
+				long elapsed = System.currentTimeMillis() - postStartMillis;
+				int remaining = postCountdownSeconds - (int)(elapsed/1000);
+				if (remaining > 0) {
+					line = line + " ... " + remaining;
+				}
+			}
 			if (line.isEmpty()) {
 				wrappedLines.add(FormattedCharSequence.EMPTY);
 			}
@@ -91,21 +107,7 @@ public class ComputerTerminalScreen extends Screen {
 		for (int i = startIndex; i < totalLines; i++) {
 			guiGraphics.drawString(this.font, wrappedLines.get(i), MARGIN, yOffset, textColor, false);
 			yOffset += LINE_HEIGHT;
-		}
-		if (postPhase) {
-			long elapsed = System.currentTimeMillis() - postStartMillis;
-			int remaining = postCountdownSeconds - (int)(elapsed / 1000);
-			if (remaining <= 0) {
-				postPhase = false;
-				ModMessages.sendToServer(new ServerboundSkipPostPacket(this.pos));
-			} else {
-				Component msg = Component.literal("Press DEL to enter SETUP ... " + remaining)
-				        .withStyle(DOS_STYLE);
-				int w = this.font.width(msg);
-				int y = this.height - MARGIN - LINE_HEIGHT;
-				guiGraphics.drawString(this.font, msg, this.width - MARGIN - w, y, textColor, false);
-			}
-		}
+		}	
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
@@ -123,13 +125,13 @@ public class ComputerTerminalScreen extends Screen {
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (postPhase) {
-		    if (keyCode == GLFW.GLFW_KEY_DELETE) {
-		        postPhase = false;
-		        ModMessages.sendToServer(new ServerboundRequestBiosConfigPacket(pos));
-		        return true;
-		    }
-		    postPhase = false;
-		    ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
+			if (keyCode == GLFW.GLFW_KEY_DELETE) {
+				postPhase = false;
+				ModMessages.sendToServer(new ServerboundRequestBiosConfigPacket(pos));
+				return true;
+			}
+			postPhase = false;
+			ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
 		}
 		if (activeApp != null) {
 			if (activeApp.keyPressed(keyCode, scanCode, modifiers)) return true;
@@ -206,14 +208,14 @@ public class ComputerTerminalScreen extends Screen {
 	 * Called by {@link com.eliaslucky.mc_dos.network.ClientboundFileWriteResultPacket}
 	 * when the server finishes processing a save.
 	 *
-	 * @param path    the path that was written
+	 * @param path	  the path that was written
 	 * @param success whether the write succeeded
 	 * @param message error message, empty on success
 	 */
 	public void onFileWriteResult(String path, boolean success, String message) {
-	    if (activeApp instanceof FileAwareApp fa) {
-	        fa.onFileWriteResult(path, success, message);
-	    }
+		if (activeApp instanceof FileAwareApp fa) {
+			fa.onFileWriteResult(path, success, message);
+		}
 	}
 
 	private void executeCommand(String cmd) {
@@ -261,23 +263,26 @@ public class ComputerTerminalScreen extends Screen {
 	 * clears the countdown flag and leaves the history alone — the
 	 * shell will populate it via normal command execution.
 	 *
-	 * @param postPhase       whether the machine is showing POST
-	 * @param postLines       BIOS output lines, empty when not in POST
+	 * @param postPhase		  whether the machine is showing POST
+	 * @param postLines		  BIOS output lines, empty when not in POST
 	 * @param countdownSeconds how long the DEL prompt stays visible
-	 * @param currentPath     current path on the filesystem
+	 * @param currentPath	  current path on the filesystem
 	 */
 	public void onTerminalState(boolean postPhase, List<String> postLines, int countdownSeconds, String currentPath) {
-	    this.postPhase = postPhase;
-	    this.postStartMillis = System.currentTimeMillis();
-	    this.postCountdownSeconds = countdownSeconds;
-	    if (currentPath != null && !currentPath.isEmpty()) {
-	    	this.activePath = currentPath;
-	    }
-	    if (postPhase) {
-	        history.clear();
-	        for (String line : postLines) history.add(line);
-	        history.add("");
-	    }
+		boolean wasInPost = this.postPhase;
+		this.postPhase = postPhase;
+		if (currentPath != null && !currentPath.isEmpty()) {
+			this.activePath = currentPath;
+		}
+		if (postPhase) {
+			if (!wasInPost) {
+				this.postStartMillis = System.currentTimeMillis();
+				this.postCountdownSeconds = countdownSeconds;
+			}
+			history.clear();
+			for (String line : postLines) history.add(line);
+			history.add("");
+		}
 	}
 
 	/**
@@ -288,16 +293,16 @@ public class ComputerTerminalScreen extends Screen {
 	 * {@code setupScreenId()} returns.
 	 */
 	public void onBiosConfigReceived(MachineConfig config, String biosName, String setupScreenId) {
-	    var factory = BiosSetupRegistry.get(setupScreenId);
-	    if (factory == null) {
-	        history.add("No setup screen registered for BIOS: " + setupScreenId);
-	        return;
-	    }
-	    launchApp(factory.create(this, config, biosName));
+		var factory = BiosSetupRegistry.get(setupScreenId);
+		if (factory == null) {
+			history.add("No setup screen registered for BIOS: " + setupScreenId);
+			return;
+		}
+		launchApp(factory.create(this, config, biosName));
 	}
-	public Font getDosFont()      { return this.font; }
-	public Style getDosStyle()    { return DOS_STYLE; }
-	public BlockPos getPos()      { return this.pos; }
+	public Font getDosFont()	  { return this.font; }
+	public Style getDosStyle()	  { return DOS_STYLE; }
+	public BlockPos getPos()	  { return this.pos; }
 	public MachineType getType() { return this.MachineType; }
 
 	@Override

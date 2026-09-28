@@ -84,8 +84,7 @@ public class ServerboundSaveBiosConfigPacket {
 			ServerPlayer player = ctx.getSender();
 			if (player == null) return;
 
-			if (!(player.serverLevel().getBlockEntity(this.pos)
-					instanceof ComputerBlockEntity computer)) {
+			if (!(player.serverLevel().getBlockEntity(this.pos) instanceof ComputerBlockEntity computer)) {
 				return;
 			}
 
@@ -94,9 +93,9 @@ public class ServerboundSaveBiosConfigPacket {
 			}
 
 			computer.setMachineConfig(this.config);
-			computer.setBootState(BootState.RUNNING);
+			computer.powerOn();
 
-			ModMessages.sendToPlayer(new ClientboundTerminalStatePacket(this.pos, false,  List.of(), 0), player);
+			ModMessages.sendToPlayer(new ClientboundTerminalStatePacket(this.pos, false,  computer.getPostLines(), 5, computer.getFileSystem().getCurrentPath()), player);
 		});
 		ctx.setPacketHandled(true);
 	}

@@ -50,7 +50,7 @@ public class ServerboundSkipPostPacket {
 				String text = String.join("\n", bootLines) + "\n";
 				ModMessages.sendToPlayer(
 					new ClientboundTerminalOutputPacket(text,computer.getFileSystem().getCurrentPath()),
-					player)
+					player);
 			}
 		});
 		ctx.setPacketHandled(true);
