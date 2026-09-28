@@ -6,13 +6,10 @@ import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
 import com.eliaslucky.mc_dos.blocks.computer.drive.DriveBay;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 import com.eliaslucky.mc_dos.items.RemovableMediaItem;
-import com.eliaslucky.mc_dos.network.ClientboundTerminalStatePacket;
-import com.eliaslucky.mc_dos.network.ModMessages;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -92,7 +89,6 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 				return InteractionResult.sidedSuccess(level.isClientSide());
 			}
 			// Terminal
-			computerBE.setMachineType(this.machineType);
 
 			if (!computerBE.tryOccupy(player)) {
 				if (!level.isClientSide()) {
@@ -102,17 +98,7 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 			}
 			
 			if (!level.isClientSide()) {
-				computerBE.setMachineType(this.machineType);
 				computerBE.powerOn();
-
-				ModMessages.sendToPlayer(
-					new ClientboundTerminalStatePacket(
-						pos,
-						computerBE.getBootState() == BootState.POST,
-						computerBE.getPostLines(),
-						5,
-						computerBE.getFileSystem().getCurrentPath()),
-					(ServerPlayer) player);
 			}
 
 			if (level.isClientSide()) {

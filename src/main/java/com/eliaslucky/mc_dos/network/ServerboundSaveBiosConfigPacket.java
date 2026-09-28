@@ -9,7 +9,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -25,10 +24,9 @@ import java.util.function.Supplier;
  * example, another player has already dismissed the setup screen or
  * the block was unloaded — the request is silently ignored.
  *
- * @since 1.0
+ * @since 1.5
  */
 public class ServerboundSaveBiosConfigPacket {
-
 	private final BlockPos pos;
 	private final MachineConfig config;
 

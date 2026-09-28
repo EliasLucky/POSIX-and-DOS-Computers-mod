@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
+import java.util.List;
 
 /**
  * Sent from client to server when the POST countdown finishes or the

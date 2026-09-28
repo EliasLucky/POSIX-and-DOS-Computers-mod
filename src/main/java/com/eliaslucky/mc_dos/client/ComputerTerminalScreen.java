@@ -69,13 +69,13 @@ public class ComputerTerminalScreen extends Screen {
 
 		List<FormattedCharSequence> wrappedLines = new ArrayList<>();
 		int lastPromptIndex = -1;
-		for (int = 0; i < history.size(); i++) {
+		for (int i = 0; i < history.size(); i++) {
 			String line = history.get(i);
 			if (!line.isEmpty() && line.contains("Press")) {
 				lastPromptIndex = i;
 			}
 		}
-		for (int = 0; i < history.size(); i++) {
+		for (int i = 0; i < history.size(); i++) {
 			String line = history.get(i);
 
 			if (postPhase && i == lastPromptIndex) {
@@ -107,7 +107,7 @@ public class ComputerTerminalScreen extends Screen {
 		for (int i = startIndex; i < totalLines; i++) {
 			guiGraphics.drawString(this.font, wrappedLines.get(i), MARGIN, yOffset, textColor, false);
 			yOffset += LINE_HEIGHT;
-		}	
+		}
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
