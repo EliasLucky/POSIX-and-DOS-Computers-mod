@@ -50,10 +50,21 @@ public class ModMessages {
 		        .consumerMainThread(ServerboundSkipPostPacket::handle)
 		        .add();
 		net.messageBuilder(ServerboundRequestBiosConfigPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-        .decoder(ServerboundRequestBiosConfigPacket::new)
-        .encoder(ServerboundRequestBiosConfigPacket::encode)
-        .consumerMainThread(ServerboundRequestBiosConfigPacket::handle)
-        .add();
+        	.decoder(ServerboundRequestBiosConfigPacket::new)
+        	.encoder(ServerboundRequestBiosConfigPacket::encode)
+        	.consumerMainThread(ServerboundRequestBiosConfigPacket::handle)
+        	.add();
+		net.messageBuilder(ServerboundSaveBiosConfigPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+	    	.decoder(ServerboundSaveBiosConfigPacket::new)
+	    	.encoder(ServerboundSaveBiosConfigPacket::encode)
+	    	.consumerMainThread(ServerboundSaveBiosConfigPacket::handle)
+	    	.add();
+		net.messageBuilder(ServerboundRequestTerminalStatePacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
+	        .decoder(ServerboundRequestTerminalStatePacket::new)
+	        .encoder(ServerboundRequestTerminalStatePacket::encode)
+	        .consumerMainThread(ServerboundRequestTerminalStatePacket::handle)
+	        .add();
+		
 		// SERVER -> CLIENT
 		net.messageBuilder(ClientboundTerminalOutputPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
 			.decoder(ClientboundTerminalOutputPacket::new)
@@ -66,11 +77,11 @@ public class ModMessages {
         	.encoder(ClientboundFileWriteResultPacket::encode)
         	.consumerMainThread(ClientboundFileWriteResultPacket::handle)
         	.add();
-net.messageBuilder(ClientboundTerminalStatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-        .decoder(ClientboundTerminalStatePacket::new)
-        .encoder(ClientboundTerminalStatePacket::encode)
-        .consumerMainThread(ClientboundTerminalStatePacket::handle)
-        .add();
+		net.messageBuilder(ClientboundTerminalStatePacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
+	        .decoder(ClientboundTerminalStatePacket::new)
+	        .encoder(ClientboundTerminalStatePacket::encode)
+	        .consumerMainThread(ClientboundTerminalStatePacket::handle)
+	        .add();
 
 net.messageBuilder(ClientboundBiosConfigPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
         .decoder(ClientboundBiosConfigPacket::new)
