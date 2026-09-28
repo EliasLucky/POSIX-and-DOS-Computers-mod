@@ -27,51 +27,51 @@ import java.util.function.Supplier;
  * @since 1.5
  */
 public class ServerboundRequestBiosConfigPacket {
-    /** The position of the computer block whose BIOS is being opened. */
-    private final BlockPos pos;
+	/** The position of the computer block whose BIOS is being opened. */
+	private final BlockPos pos;
 
-    /**
-     * @param pos the computer block position
-     */
-    public ServerboundRequestBiosConfigPacket(BlockPos pos) {
-        this.pos = pos;
-    }
+	/**
+	 * @param pos the computer block position
+	 */
+	public ServerboundRequestBiosConfigPacket(BlockPos pos) {
+		this.pos = pos;
+	}
 
-    public ServerboundRequestBiosConfigPacket(FriendlyByteBuf buffer) {
-        this.pos = buffer.readBlockPos();
-    }
+	public ServerboundRequestBiosConfigPacket(FriendlyByteBuf buffer) {
+		this.pos = buffer.readBlockPos();
+	}
 
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeBlockPos(this.pos);
-    }
+	public void encode(FriendlyByteBuf buffer) {
+		buffer.writeBlockPos(this.pos);
+	}
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context ctx = contextSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+	public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
+		NetworkEvent.Context ctx = contextSupplier.get();
+		ctx.enqueueWork(() -> {
+			ServerPlayer player = ctx.getSender();
+			if (player == null) return;
 
-            if (!(player.serverLevel().getBlockEntity(this.pos)
-                    instanceof ComputerBlockEntity computer)) {
-                return;
-            }
+			if (!(player.serverLevel().getBlockEntity(this.pos)
+					instanceof ComputerBlockEntity computer)) {
+				return;
+			}
 
-            if (computer.getBootState() != BootState.POST) {
-                return;
-            }
+			if (computer.getBootState() != BootState.POST) {
+				return;
+			}
 
-            computer.setBootState(BootState.SETUP);
+			computer.setBootState(BootState.SETUP);
 
-            // Send the machine's current configuration and BIOS name.
-            // The client picks the SETUP screen by BIOS name.
-            ModMessages.sendToPlayer(
-                    new ClientboundBiosConfigPacket(
-                            this.pos,
-                            computer.getMachineConfig(),
-                            computer.getMachineType().bios().name(),
-                    computer.getMachineType().bios().setupScreenId()),
-                    player);
-        });
-        ctx.setPacketHandled(true);
-    }
+			// Send the machine's current configuration and BIOS name.
+			// The client picks the SETUP screen by BIOS name.
+			ModMessages.sendToPlayer(
+					new ClientboundBiosConfigPacket(
+							this.pos,
+							computer.getMachineConfig(),
+							computer.getMachineType().bios().name(),
+					computer.getMachineType().bios().setupScreenId()),
+					player);
+		});
+		ctx.setPacketHandled(true);
+	}
 }

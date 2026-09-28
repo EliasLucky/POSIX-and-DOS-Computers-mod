@@ -27,55 +27,55 @@ import java.util.List;
  * @since 1.5
  */
 public class IbmAtBios implements Bios {
-    @Override
-    public String name() { return "IBM Personal Computer AT"; }
+	@Override
+	public String name() { return "IBM Personal Computer AT"; }
 
-    @Override
-    public String version() { return "Version C1.00"; }
-    @Override public String manufacturer() { return "IBM"; }
-    @Override public String releaseDate()  { return "02/21/1987"; }
-    @Override public String copyright()    { return "Copyright IBM Corp. 1981, 1984, 1986"; }
-    @Override
-    public List<String> runPost(ComputerBlockEntity machine, PeripheralBus bus, MachineConfig config) {
-        List<String> out = new ArrayList<>();
+	@Override
+	public String version() { return "Version C1.00"; }
+	@Override public String manufacturer() { return "IBM"; }
+	@Override public String releaseDate()  { return "02/21/1987"; }
+	@Override public String copyright()    { return "Copyright IBM Corp. 1981, 1984, 1986"; }
+	@Override
+	public List<String> runPost(ComputerBlockEntity machine, PeripheralBus bus, MachineConfig config) {
+		List<String> out = new ArrayList<>();
 
-        // Firmware banner
-        out.add(name());
-        out.add("IBM BIOS " + version());
-        out.add("Copyright IBM Corp. 1981, 1984, 1986");
-        out.add("");
+		// Firmware banner
+		out.add(name());
+		out.add("IBM BIOS " + version());
+		out.add("Copyright IBM Corp. 1981, 1984, 1986");
+		out.add("");
 
-        // Memory test
-        int baseK = config.baseMemoryKb();
-        out.add(String.format("%04d KB OK", baseK));
-        out.add("");
+		// Memory test
+		int baseK = config.baseMemoryKb();
+		out.add(String.format("%04d KB OK", baseK));
+		out.add("");
 
-        // Hardware enumeration
-        List<PeripheralAddress> devices = bus.scan();
-        if (!devices.isEmpty()) {
-            out.add("Detected hardware:");
-            for (PeripheralAddress addr : devices) {
-                out.add(String.format("  %d:%02d  %-12s  %s",
-                        addr.slot(),
-                        0,
-                        addr.deviceClass().toUpperCase(),
-                        addr.vendorId()));
-            }
-            out.add("");
-        }
+		// Hardware enumeration
+		List<PeripheralAddress> devices = bus.scan();
+		if (!devices.isEmpty()) {
+			out.add("Detected hardware:");
+			for (PeripheralAddress addr : devices) {
+				out.add(String.format("  %d:%02d  %-12s  %s",
+						addr.slot(),
+						0,
+						addr.deviceClass().toUpperCase(),
+						addr.vendorId()));
+			}
+			out.add("");
+		}
 
-        // SETUP prompt
-        out.add(setupPrompt());
+		// SETUP prompt
+		out.add(setupPrompt());
 
-        return out;
-    }
+		return out;
+	}
 
-    @Override
-    public int setupKeyCode() { return GLFW.GLFW_KEY_DELETE; }
+	@Override
+	public int setupKeyCode() { return GLFW.GLFW_KEY_DELETE; }
 
-    @Override
-    public String setupPrompt() { return "Press DEL to enter SETUP"; }
+	@Override
+	public String setupPrompt() { return "Press DEL to enter SETUP"; }
 
-    @Override
-    public String setupScreenId() { return "IBM_AT_SETUP"; }
+	@Override
+	public String setupScreenId() { return "IBM_AT_SETUP"; }
 }

@@ -26,119 +26,121 @@ import java.util.function.Consumer;
  * @since 1.5
  */
 public class TuiList implements TuiWidget {
-    private final int row, col, width, height;
-    private final List<String> items = new ArrayList<>();
-    private int selected = 0;
-    private int scrollTop = 0;
-    private Consumer<Integer> onActivate;
+	private final int row, col, width, height;
+	private final List<String> items = new ArrayList<>();
+	private int selected = 0;
+	private int scrollTop = 0;
+	private Consumer<Integer> onActivate;
 
-    /**
-     * @param row    top-left row in cells
-     * @param col    top-left column in cells
-     * @param width  widget width in cells
-     * @param height widget height in cells
-     */
-    public TuiList(int row, int col, int width, int height) {
-        this.row = row;
-        this.col = col;
-        this.width = width;
-        this.height = height;
-    }
+	/**
+	 * @param row	 top-left row in cells
+	 * @param col	 top-left column in cells
+	 * @param width  widget width in cells
+	 * @param height widget height in cells
+	 */
+	public TuiList(int row, int col, int width, int height) {
+		this.row = row;
+		this.col = col;
+		this.width = width;
+		this.height = height;
+	}
 
-    /**
-     * Replace the item list.
-     *
-     * @param newItems the new items
-     */
-    public void setItems(List<String> newItems) {
-        items.clear();
-        items.addAll(newItems);
-        if (selected >= items.size()) selected = Math.max(0, items.size() - 1);
-        clampScroll();
-    }
+	/**
+	 * Replace the item list.
+	 *
+	 * @param newItems the new items
+	 */
+	public void setItems(List<String> newItems) {
+		items.clear();
+		items.addAll(newItems);
+		if (selected >= items.size()) selected = Math.max(0, items.size() - 1);
+		clampScroll();
+	}
 
-    /** @return the index of the currently highlighted item, or {@code -1} if empty. */
-    public int selectedIndex() { return items.isEmpty() ? -1 : selected; }
+	/** @return the index of the currently highlighted item, or {@code -1} if empty. */
+	public int selectedIndex() { return items.isEmpty() ? -1 : selected; }
 
-    /** @return the currently highlighted item, or {@code null} if empty. */
-    public String selectedItem() { return items.isEmpty() ? null : items.get(selected); }
+	/** @return the currently highlighted item, or {@code null} if empty. */
+	public String selectedItem() { return items.isEmpty() ? null : items.get(selected); }
 
-    /**
-     * Set the index of the highlighted item.
-     *
-     * @param i the index; clamps to the list bounds
-     */
-    public void setSelected(int i) {
-        selected = Math.max(0, Math.min(items.size() - 1, i));
-        clampScroll();
-    }
+	/**
+	 * Set the index of the highlighted item.
+	 *
+	 * @param i the index; clamps to the list bounds
+	 */
+	public void setSelected(int i) {
+		selected = Math.max(0, Math.min(items.size() - 1, i));
+		clampScroll();
+	}
 
-    /**
-     * Register a callback fired when the user presses Enter on a row.
-     *
-     * @param c the callback, receiving the selected index
-     */
-    public void onActivate(Consumer<Integer> c) { this.onActivate = c; }
+	/**
+	 * Register a callback fired when the user presses Enter on a row.
+	 *
+	 * @param c the callback, receiving the selected index
+	 */
+	public void onActivate(Consumer<Integer> c) { this.onActivate = c; }
 
-    @Override public int row()    { return row; }
-    @Override public int col()    { return col; }
-    @Override public int width()  { return width; }
-    @Override public int height() { return height; }
+	@Override public int row()	  { return row; }
+	@Override public int col()	  { return col; }
+	@Override public int width()  { return width; }
+	@Override public int height() { return height; }
 
-    @Override
-    public void render(GuiGraphics g, TerminalApplication app) {
-        for (int i = 0; i < height; i++) {
-            int itemIndex = scrollTop + i;
-            if (itemIndex >= items.size()) break;
+	@Override
+	public void render(GuiGraphics g, TerminalApplication app) {
+		TuiTheme t = app.theme();
 
-            String text = items.get(itemIndex);
-            if (text.length() > width) text = text.substring(0, width);
+		for (int i = 0; i < height; i++) {
+			int itemIndex = scrollTop + i;
+			if (itemIndex >= items.size()) break;
 
-            int y = (row + i) * TerminalApplication.CELL_H;
-            boolean hot = (itemIndex == selected);
+			String text = items.get(itemIndex);
+			if (text.length() > width) text = text.substring(0, width);
 
-            if (hot) {
-                int px = col * TerminalApplication.CELL_W;
-                int pw = width * TerminalApplication.CELL_W;
-                g.fill(px, y, px + pw, y + TerminalApplication.CELL_H,
-                        TuiPalette.HIGHLIGHT_BG);
-            }
-            app.drawDos(g, text, col * TerminalApplication.CELL_W, y,
-                    hot ? TuiPalette.HIGHLIGHT_FG : TuiPalette.NORMAL);
-        }
-    }
+			int y = (row + i) * TerminalApplication.CELL_H;
+			boolean hot = (itemIndex == selected);
 
-    @Override
-    public boolean keyPressed(int key, int scan, int mods) {
-        if (items.isEmpty()) return false;
-        switch (key) {
-            case GLFW.GLFW_KEY_UP:
-                selected = Math.max(0, selected - 1);
-                clampScroll();
-                return true;
-            case GLFW.GLFW_KEY_DOWN:
-                selected = Math.min(items.size() - 1, selected + 1);
-                clampScroll();
-                return true;
-            case GLFW.GLFW_KEY_HOME:
-                selected = 0;
-                clampScroll();
-                return true;
-            case GLFW.GLFW_KEY_END:
-                selected = items.size() - 1;
-                clampScroll();
-                return true;
-            case GLFW.GLFW_KEY_ENTER:
-            case GLFW.GLFW_KEY_KP_ENTER:
-                if (onActivate != null) onActivate.accept(selected);
-                return true;
-        }
-        return false;
-    }
+			if (hot) {
+				int px = col * TerminalApplication.CELL_W;
+				int pw = width * TerminalApplication.CELL_W;
+				g.fill(px, y, px + pw, y + TerminalApplication.CELL_H,
+						t.highlightBg());
+			}
+			app.drawDos(g, text, col * TerminalApplication.CELL_W, y,
+					hot ? t.highlightFg() : t.screenFg());
+		}
+	}
 
-    private void clampScroll() {
-        if (selected < scrollTop) scrollTop = selected;
-        if (selected >= scrollTop + height) scrollTop = selected - height + 1;
-        scrollTop = Math.max(0, Math.min(scrollTop, Math.max(0, items.size() - height)));
-    }
+	@Override
+	public boolean keyPressed(int key, int scan, int mods) {
+		if (items.isEmpty()) return false;
+		switch (key) {
+			case GLFW.GLFW_KEY_UP:
+				selected = Math.max(0, selected - 1);
+				clampScroll();
+				return true;
+			case GLFW.GLFW_KEY_DOWN:
+				selected = Math.min(items.size() - 1, selected + 1);
+				clampScroll();
+				return true;
+			case GLFW.GLFW_KEY_HOME:
+				selected = 0;
+				clampScroll();
+				return true;
+			case GLFW.GLFW_KEY_END:
+				selected = items.size() - 1;
+				clampScroll();
+				return true;
+			case GLFW.GLFW_KEY_ENTER:
+			case GLFW.GLFW_KEY_KP_ENTER:
+				if (onActivate != null) onActivate.accept(selected);
+				return true;
+		}
+		return false;
+	}
+
+	private void clampScroll() {
+		if (selected < scrollTop) scrollTop = selected;
+		if (selected >= scrollTop + height) scrollTop = selected - height + 1;
+		scrollTop = Math.max(0, Math.min(scrollTop, Math.max(0, items.size() - height)));
+	}
 }

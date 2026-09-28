@@ -29,75 +29,75 @@ import java.util.function.Supplier;
  */
 public class ServerboundSaveBiosConfigPacket {
 
-    private final BlockPos pos;
-    private final MachineConfig config;
+	private final BlockPos pos;
+	private final MachineConfig config;
 
-    /**
-     * @param pos    the computer block whose config is being saved
-     * @param config the new configuration
-     */
-    public ServerboundSaveBiosConfigPacket(BlockPos pos, MachineConfig config) {
-        this.pos = pos;
-        this.config = config;
-    }
+	/**
+	 * @param pos	 the computer block whose config is being saved
+	 * @param config the new configuration
+	 */
+	public ServerboundSaveBiosConfigPacket(BlockPos pos, MachineConfig config) {
+		this.pos = pos;
+		this.config = config;
+	}
 
-    public ServerboundSaveBiosConfigPacket(FriendlyByteBuf buffer) {
-        this.pos = buffer.readBlockPos();
+	public ServerboundSaveBiosConfigPacket(FriendlyByteBuf buffer) {
+		this.pos = buffer.readBlockPos();
 
-        long time = buffer.readLong();
-        MachineConfig.FloppyType floppyA =
-                MachineConfig.FloppyType.values()[buffer.readByte()];
-        MachineConfig.FloppyType floppyB =
-                MachineConfig.FloppyType.values()[buffer.readByte()];
-        MachineConfig.DiskType hd1 =
-                MachineConfig.DiskType.values()[buffer.readByte()];
-        MachineConfig.DiskType hd2 =
-                MachineConfig.DiskType.values()[buffer.readByte()];
-        int baseMem = buffer.readVarInt();
-        int extMem  = buffer.readVarInt();
-        boolean coprocessor = buffer.readBoolean();
-        MachineConfig.DisplayType display =
-                MachineConfig.DisplayType.values()[buffer.readByte()];
+		long time = buffer.readLong();
+		MachineConfig.FloppyType floppyA =
+				MachineConfig.FloppyType.values()[buffer.readByte()];
+		MachineConfig.FloppyType floppyB =
+				MachineConfig.FloppyType.values()[buffer.readByte()];
+		MachineConfig.DiskType hd1 =
+				MachineConfig.DiskType.values()[buffer.readByte()];
+		MachineConfig.DiskType hd2 =
+				MachineConfig.DiskType.values()[buffer.readByte()];
+		int baseMem = buffer.readVarInt();
+		int extMem	= buffer.readVarInt();
+		boolean coprocessor = buffer.readBoolean();
+		MachineConfig.DisplayType display =
+				MachineConfig.DisplayType.values()[buffer.readByte()];
 
-        this.config = new MachineConfig(
-                time, floppyA, floppyB, hd1, hd2,
-                baseMem, extMem, coprocessor, display);
-    }
+		this.config = new MachineConfig(
+				time, floppyA, floppyB, hd1, hd2,
+				baseMem, extMem, coprocessor, display);
+	}
 
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeBlockPos(this.pos);
+	public void encode(FriendlyByteBuf buffer) {
+		buffer.writeBlockPos(this.pos);
 
-        buffer.writeLong(this.config.systemTime());
-        buffer.writeByte(this.config.floppyA().ordinal());
-        buffer.writeByte(this.config.floppyB().ordinal());
-        buffer.writeByte(this.config.hardDisk1().ordinal());
-        buffer.writeByte(this.config.hardDisk2().ordinal());
-        buffer.writeVarInt(this.config.baseMemoryKb());
-        buffer.writeVarInt(this.config.extendedMemoryKb());
-        buffer.writeBoolean(this.config.mathCoprocessor());
-        buffer.writeByte(this.config.primaryDisplay().ordinal());
-    }
+		buffer.writeLong(this.config.systemTime());
+		buffer.writeByte(this.config.floppyA().ordinal());
+		buffer.writeByte(this.config.floppyB().ordinal());
+		buffer.writeByte(this.config.hardDisk1().ordinal());
+		buffer.writeByte(this.config.hardDisk2().ordinal());
+		buffer.writeVarInt(this.config.baseMemoryKb());
+		buffer.writeVarInt(this.config.extendedMemoryKb());
+		buffer.writeBoolean(this.config.mathCoprocessor());
+		buffer.writeByte(this.config.primaryDisplay().ordinal());
+	}
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context ctx = contextSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+	public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
+		NetworkEvent.Context ctx = contextSupplier.get();
+		ctx.enqueueWork(() -> {
+			ServerPlayer player = ctx.getSender();
+			if (player == null) return;
 
-            if (!(player.serverLevel().getBlockEntity(this.pos)
-                    instanceof ComputerBlockEntity computer)) {
-                return;
-            }
+			if (!(player.serverLevel().getBlockEntity(this.pos)
+					instanceof ComputerBlockEntity computer)) {
+				return;
+			}
 
-            if (computer.getBootState() != BootState.SETUP) {
-                return;
-            }
+			if (computer.getBootState() != BootState.SETUP) {
+				return;
+			}
 
-            computer.setMachineConfig(this.config);
-            computer.setBootState(BootState.RUNNING);
+			computer.setMachineConfig(this.config);
+			computer.setBootState(BootState.RUNNING);
 
-            ModMessages.sendToPlayer(new ClientboundTerminalStatePacket(this.pos, false,  List.of(), 0), player);
-        });
-        ctx.setPacketHandled(true);
-    }
+			ModMessages.sendToPlayer(new ClientboundTerminalStatePacket(this.pos, false,  List.of(), 0), player);
+		});
+		ctx.setPacketHandled(true);
+	}
 }

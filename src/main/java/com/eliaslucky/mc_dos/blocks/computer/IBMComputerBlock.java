@@ -60,38 +60,38 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 		BlockEntity be = level.getBlockEntity(pos);
 		if (be instanceof ComputerBlockEntity computerBE) {
 			ItemStack held = player.getItemInHand(hand);
-		    boolean sneaking = player.isShiftKeyDown();
+			boolean sneaking = player.isShiftKeyDown();
 
-		    // Insert
-		    if (sneaking && !held.isEmpty() && held.getItem() instanceof RemovableMediaItem) {
-		        if (!level.isClientSide()) {
-		            if (computerBE.tryInsertMedia(held, player)) {
-		                player.displayClientMessage(
-		                        Component.literal("Disk inserted."), true);
-		            } else {
-		                player.displayClientMessage(
-		                        Component.literal("No compatible empty bay."), true);
-		            }
-		        }
-		        return InteractionResult.sidedSuccess(level.isClientSide());
-		    }
+			// Insert
+			if (sneaking && !held.isEmpty() && held.getItem() instanceof RemovableMediaItem) {
+				if (!level.isClientSide()) {
+					if (computerBE.tryInsertMedia(held, player)) {
+						player.displayClientMessage(
+								Component.literal("Disk inserted."), true);
+					} else {
+						player.displayClientMessage(
+								Component.literal("No compatible empty bay."), true);
+					}
+				}
+				return InteractionResult.sidedSuccess(level.isClientSide());
+			}
 
-		    // Eject
-		    if (sneaking && held.isEmpty() && computerBE.hasInsertedMedia()) {
-		        if (!level.isClientSide()) {
-		            // Eject from the first bay that has media.
-		            for (DriveBay bay : computerBE.driveBays()) {
-		                if (bay.hasMedia()) {
-		                    computerBE.tryEjectMedia(bay.index(), player);
-		                    player.displayClientMessage(
-		                            Component.literal("Disk ejected."), true);
-		                    break;
-		                }
-		            }
-		        }
-		        return InteractionResult.sidedSuccess(level.isClientSide());
-		    }
-		    // Terminal
+			// Eject
+			if (sneaking && held.isEmpty() && computerBE.hasInsertedMedia()) {
+				if (!level.isClientSide()) {
+					// Eject from the first bay that has media.
+					for (DriveBay bay : computerBE.driveBays()) {
+						if (bay.hasMedia()) {
+							computerBE.tryEjectMedia(bay.index(), player);
+							player.displayClientMessage(
+									Component.literal("Disk ejected."), true);
+							break;
+						}
+					}
+				}
+				return InteractionResult.sidedSuccess(level.isClientSide());
+			}
+			// Terminal
 			computerBE.setMachineType(this.machineType);
 
 			if (!computerBE.tryOccupy(player)) {
@@ -102,15 +102,18 @@ public class IBMComputerBlock extends DirectionalHorizontalBlock implements Enti
 			}
 			
 			if (!level.isClientSide()) {
-			    computerBE.powerOn();
+				computerBE.setMachineType(this.machineType);
+				computerBE.powerOn();
+
 				ModMessages.sendToPlayer(
-			            new ClientboundTerminalStatePacket(
-			                    pos,
-			                    computerBE.getBootState() == BootState.POST,
-			                    computerBE.getPostLines(),
-			                    5),
-			            (ServerPlayer) player);
-		    }
+					new ClientboundTerminalStatePacket(
+						pos,
+						computerBE.getBootState() == BootState.POST,
+						computerBE.getPostLines(),
+						5,
+						computerBE.getFileSystem().getCurrentPath()),
+					(ServerPlayer) player);
+			}
 
 			if (level.isClientSide()) {
 				net.minecraft.client.Minecraft.getInstance().setScreen(new ComputerTerminalScreen(pos, this.machineType));

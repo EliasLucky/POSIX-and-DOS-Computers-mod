@@ -14,6 +14,7 @@ import com.eliaslucky.mc_dos.network.ServerboundCloseTerminalPacket;
 import com.eliaslucky.mc_dos.network.ServerboundCommandPacket;
 import com.eliaslucky.mc_dos.network.ServerboundFileWritePacket;
 import com.eliaslucky.mc_dos.network.ServerboundRequestBiosConfigPacket;
+import com.eliaslucky.mc_dos.network.ServerboundRequestTerminalStatePacket;
 import com.eliaslucky.mc_dos.network.ServerboundSkipPostPacket;
 
 import net.minecraft.client.gui.Font;
@@ -49,6 +50,7 @@ public class ComputerTerminalScreen extends Screen {
 		this.pos = pos;
 		this.MachineType = MachineType;
 		this.activePath = MachineType.defaultPath();
+	    ModMessages.sendToServer(new ServerboundRequestTerminalStatePacket(pos));
 	}
 	
 	@Override
@@ -262,11 +264,15 @@ public class ComputerTerminalScreen extends Screen {
 	 * @param postPhase       whether the machine is showing POST
 	 * @param postLines       BIOS output lines, empty when not in POST
 	 * @param countdownSeconds how long the DEL prompt stays visible
+	 * @param currentPath     current path on the filesystem
 	 */
-	public void onTerminalState(boolean postPhase, List<String> postLines, int countdownSeconds) {
+	public void onTerminalState(boolean postPhase, List<String> postLines, int countdownSeconds, String currentPath) {
 	    this.postPhase = postPhase;
 	    this.postStartMillis = System.currentTimeMillis();
 	    this.postCountdownSeconds = countdownSeconds;
+	    if (currentPath != null && !currentPath.isEmpty()) {
+	    	this.activePath = currentPath;
+	    }
 	    if (postPhase) {
 	        history.clear();
 	        for (String line : postLines) history.add(line);

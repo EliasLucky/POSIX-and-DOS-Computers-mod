@@ -10,6 +10,6 @@ package com.eliaslucky.mc_dos.blocks.computer.basic;
  * is known.
  */
 public final class JumpTarget {
-    /** Set once the parser resolves it. -1 means "not yet assigned". */
-    public int pc = -1;
+	/** Set once the parser resolves it. -1 means "not yet assigned". */
+	public int pc = -1;
 }

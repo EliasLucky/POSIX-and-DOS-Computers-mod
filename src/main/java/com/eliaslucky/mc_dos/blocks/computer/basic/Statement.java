@@ -51,9 +51,9 @@ record InputStmt(int line, String prompt, List<String> targets) implements State
 		// First execution: print prompt, request input, pc stays put.
 		if (!ctx.hasInputValue()) {
 			if (!prompt.isEmpty()) host.print(prompt);
-			ctx.requestInput();
-			return;
-		}
+				ctx.requestInput();
+				return;
+			}
 
 		// Resumed: consume the supplied line and assign to each target.
 		String raw = ctx.consumeInput();
@@ -61,11 +61,12 @@ record InputStmt(int line, String prompt, List<String> targets) implements State
 
 		for (int i = 0; i < targets.size(); i++) {
 			String name = targets.get(i);
-			String val	= (i < parts.length) ? parts[i].trim() : "";
+			String val = (i < parts.length) ? parts[i].trim() : "";
 
 			if (name.toUpperCase().endsWith("$")) {
 				ctx.setVar(name, Value.of(val));
-			} else {
+			}
+			else {
 				try   { ctx.setVar(name, Value.of(Double.parseDouble(val))); }
 				catch (NumberFormatException e) { ctx.setVar(name, Value.of(0)); }
 			}
@@ -81,7 +82,7 @@ record AssignStmt(int line, String name, Expression value) implements Statement 
 	}
 }
 
-// IF cond THEN ... [ELSE ...]	(single-line form)
+// IF cond THEN ... [ELSE ...]		(single-line form)
 record IfStmt(int line, Expression cond, List<Statement> thenBody, List<Statement> elseBody) implements Statement {
 	@Override public int line() { return line; }
 	@Override public void execute(ExecutionContext ctx, Host host) {
@@ -97,7 +98,7 @@ record ForStmt(int line, String var, Expression from, Expression to, Expression 
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
 		double start = from.eval(ctx, host).asNumber();
-		double end	 = to.eval(ctx, host).asNumber();
+		double end = to.eval(ctx, host).asNumber();
 		double stepV = (step == null) ? 1.0 : step.eval(ctx, host).asNumber();
 		if (stepV == 0) stepV = 1;
 
@@ -214,7 +215,7 @@ record LocateStmt(int line, Expression row, Expression col) implements Statement
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
 		host.locate((int) row.eval(ctx, host).asNumber(),
-					(int) col.eval(ctx, host).asNumber());
+		(int) col.eval(ctx, host).asNumber());
 	}
 }
 
@@ -243,37 +244,38 @@ record PsetStmt(int line, Expression x, Expression y, Expression color) implemen
 	public void execute(ExecutionContext ctx, Host host) {
 		int c = (color == null) ? 15 : (int) color.eval(ctx, host).asNumber();
 		host.pset((int) x.eval(ctx, host).asNumber(),
-				  (int) y.eval(ctx, host).asNumber(), c);
+		(int) y.eval(ctx, host).asNumber(), c);
 	}
 }
 
 // LINE (x1,y1)-(x2,y2) [, color [, B | BF]]
 record LineStmt(int line, Expression x1, Expression y1, Expression x2, Expression y2, Expression color,  boolean box, boolean filledBox) implements Statement {
- 	@Override public int line() { return line; }
+	@Override public int line() { return line; }
 
- 	@Override
-	 	public void execute(ExecutionContext ctx, Host host) {
-		 int ax = (int) x1.eval(ctx, host).asNumber();
-		 int ay = (int) y1.eval(ctx, host).asNumber();
-		 int bx = (int) x2.eval(ctx, host).asNumber();
-		 int by = (int) y2.eval(ctx, host).asNumber();
-		 int c	= color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
-	
-		 if (box) {
-			 host.drawLine(ax, ay, bx, ay, c, 0);
-			 host.drawLine(bx, ay, bx, by, c, 0);
-			 host.drawLine(bx, by, ax, by, c, 0);
-			 host.drawLine(ax, by, ax, ay, c, 0);
-			 if (filledBox) {
-				 int y0 = Math.min(ay, by);
-				 int y1 = Math.max(ay, by);
-				 int xl = Math.min(ax, bx);
-				 int xr = Math.max(ax, bx);
-				 for (int y = y0; y <= y1; y++) host.drawLine(xl, y, xr, y, c, 0);
-			 }
-		 } else {
-			 host.drawLine(ax, ay, bx, by, c, 0);
-		 }
+	@Override
+	public void execute(ExecutionContext ctx, Host host) {
+		int ax = (int) x1.eval(ctx, host).asNumber();
+		int ay = (int) y1.eval(ctx, host).asNumber();
+		int bx = (int) x2.eval(ctx, host).asNumber();
+		int by = (int) y2.eval(ctx, host).asNumber();
+		int c = color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
+
+		if (box) {
+			host.drawLine(ax, ay, bx, ay, c, 0);
+			host.drawLine(bx, ay, bx, by, c, 0);
+			host.drawLine(bx, by, ax, by, c, 0);
+			host.drawLine(ax, by, ax, ay, c, 0);
+			if (filledBox) {
+				int y0 = Math.min(ay, by);
+				int y1 = Math.max(ay, by);
+				int xl = Math.min(ax, bx);
+				int xr = Math.max(ax, bx);
+				for (int y = y0; y <= y1; y++) host.drawLine(xl, y, xr, y, c, 0);
+			}
+		}
+		else {
+			host.drawLine(ax, ay, bx, by, c, 0);
+		}
 	}
 }
 
@@ -282,36 +284,35 @@ record CircleStmt(int line, Expression x, Expression y, Expression radius, Expre
 	@Override public int line() { return line; }
 
 	@Override
- 	public void execute(ExecutionContext ctx, Host host) {
-	int cx = (int) x.eval(ctx, host).asNumber();
-	int cy = (int) y.eval(ctx, host).asNumber();
-	int r	= (int) radius.eval(ctx, host).asNumber();
-	int c	= color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
-	host.circle(cx, cy, r, c, false);
- 	}
+	public void execute(ExecutionContext ctx, Host host) {
+		int cx = (int) x.eval(ctx, host).asNumber();
+		int cy = (int) y.eval(ctx, host).asNumber();
+		int r = (int) radius.eval(ctx, host).asNumber();
+		int c = color == null ? host.colorFg() : (int) color.eval(ctx, host).asNumber();
+		host.circle(cx, cy, r, c, false);
+	}
 }
 
 record RandomizeStmt(int line, Expression seed) implements Statement {
 	@Override public int line() { return line; }
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
-		long s = seed == null ? System.nanoTime()
-							  : (long) seed.eval(ctx, host).asNumber();
+		long s = seed == null ? System.nanoTime() : (long) seed.eval(ctx, host).asNumber();
 		BuiltinFunctions.seed(s);
 	}
 }
 
 // DO ... LOOP
 record DoStmt(int line, Expression topCondition, boolean topUntil, boolean checkAtTop, JumpTarget exit) implements Statement {
- 	@Override public int line() { return line; }
+	@Override public int line() { return line; }
 
- 	@Override
- 	public void execute(ExecutionContext ctx, Host host) {
-		 if (!checkAtTop) return;		// plain DO: just fall through
-		 boolean cond = topCondition.eval(ctx, host).asNumber() != 0;
-		 boolean shouldExit = topUntil ? cond : !cond;
-		 if (shouldExit) ctx.jumpTo(exit.pc);
- 	}
+	@Override
+	public void execute(ExecutionContext ctx, Host host) {
+		if (!checkAtTop) return;							// plain DO: just fall through
+		boolean cond = topCondition.eval(ctx, host).asNumber() != 0;
+		boolean shouldExit = topUntil ? cond : !cond;
+		if (shouldExit) ctx.jumpTo(exit.pc);
+	}
 }
 
 record LoopStmt(int line, Expression bottomCondition, boolean bottomUntil, boolean checkAtTop, JumpTarget bodyStart) implements Statement {
@@ -319,21 +320,21 @@ record LoopStmt(int line, Expression bottomCondition, boolean bottomUntil, boole
 
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
-		 if (checkAtTop) {
+		if (checkAtTop) {
 			// DO WHILE / DO UNTIL: unconditional jump back; the top
 			// statement re-evaluates and exits if needed.
 			ctx.jumpTo(bodyStart.pc);
 			return;
-		 }
-		 // LOOP WHILE / LOOP UNTIL — or bare LOOP (bottomCondition == null
-		 // which means "always continue").
-		 if (bottomCondition == null) {
+		}
+		// LOOP WHILE / LOOP UNTIL — or bare LOOP (bottomCondition == null
+		// which means "always continue").
+		if (bottomCondition == null) {
 			ctx.jumpTo(bodyStart.pc);
 			return;
-		 }
-		 boolean cond = bottomCondition.eval(ctx, host).asNumber() != 0;
-		 boolean shouldContinue = bottomUntil ? !cond : cond;
-		 if (shouldContinue) ctx.jumpTo(bodyStart.pc);
+		}
+		boolean cond = bottomCondition.eval(ctx, host).asNumber() != 0;
+		boolean shouldContinue = bottomUntil ? !cond : cond;
+		if (shouldContinue) ctx.jumpTo(bodyStart.pc);
 	}
 }
 
@@ -341,37 +342,37 @@ record ExitDoStmt(int line, JumpTarget target) implements Statement {
 	@Override public int line() { return line; }
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
-		 if (target.pc < 0) {
+		if (target.pc < 0) {
 			// Should never happen — parser filled it in at LOOP.
 			host.runtimeError(1, "EXIT DO with unresolved target", line);
 			ctx.stop();
 			return;
-		 }
-		 ctx.jumpTo(target.pc);
+		}
+		ctx.jumpTo(target.pc);
 	}
 }
 // SELECT CASE
 record SelectStmt(int line, Expression subject, List<CaseClause> clauses) implements Statement {
 	public record CaseClause(List<Expression> values, List<Statement> body) {}
-	
+				
 	@Override public int line() { return line; }
-	
+				
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
-		Value subjectValue = subject.eval(ctx, host);		// ← renamed
+		Value subjectValue = subject.eval(ctx, host);
 		
 		for (CaseClause clause : clauses) {
 			for (Expression v : clause.values()) {
 				Value cv = v.eval(ctx, host);
-		
+				
 				boolean match = subjectValue.isString() == cv.isString()
-							&& (subjectValue.isString()
-							? subjectValue.asString().equals(cv.asString())
-							: subjectValue.asNumber() == cv.asNumber());
-		
+									&& (subjectValue.isString()
+									? subjectValue.asString().equals(cv.asString())
+									: subjectValue.asNumber() == cv.asNumber());
+				
 				if (match) {
-						for (Statement s : clause.body()) s.execute(ctx, host);
-						return;
+					for (Statement s : clause.body()) s.execute(ctx, host);
+					return;
 				}
 			}
 		}
@@ -384,13 +385,8 @@ record ViewStmt(int line, Expression x1, Expression y1, Expression x2, Expressio
 
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
-		 if (reset) { host.resetViewport(); return; }
-		 host.setViewport(
-						 (int) x1.eval(ctx, host).asNumber(),
-						 (int) y1.eval(ctx, host).asNumber(),
-						 (int) x2.eval(ctx, host).asNumber(),
-						 (int) y2.eval(ctx, host).asNumber(),
-						 border == null ? -1 : (int) border.eval(ctx, host).asNumber());
+		if (reset) { host.resetViewport(); return; }
+		host.setViewport((int) x1.eval(ctx, host).asNumber(),(int) y1.eval(ctx, host).asNumber(),(int) x2.eval(ctx, host).asNumber(),(int) y2.eval(ctx, host).asNumber(),border == null ? -1 : (int) border.eval(ctx, host).asNumber());
 	}
 }
 

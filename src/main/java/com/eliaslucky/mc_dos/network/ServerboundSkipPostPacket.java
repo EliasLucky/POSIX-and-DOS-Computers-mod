@@ -16,31 +16,43 @@ import java.util.function.Supplier;
  * RUNNING so the shell prompt becomes active.
  */
 public class ServerboundSkipPostPacket {
-    private final BlockPos pos;
+	private final BlockPos pos;
 
-    public ServerboundSkipPostPacket(BlockPos pos) {
-        this.pos = pos;
-    }
+	public ServerboundSkipPostPacket(BlockPos pos) {
+		this.pos = pos;
+	}
 
-    public ServerboundSkipPostPacket(FriendlyByteBuf buffer) {
-        this.pos = buffer.readBlockPos();
-    }
+	public ServerboundSkipPostPacket(FriendlyByteBuf buffer) {
+		this.pos = buffer.readBlockPos();
+	}
 
-    public void encode(FriendlyByteBuf buffer) {
-        buffer.writeBlockPos(pos);
-    }
+	public void encode(FriendlyByteBuf buffer) {
+		buffer.writeBlockPos(pos);
+	}
 
-    public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-        NetworkEvent.Context ctx = contextSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
-            if (player.serverLevel().getBlockEntity(pos) instanceof ComputerBlockEntity computer) {
-                if (computer.getBootState() == BootState.POST) {
-                    computer.setBootState(BootState.RUNNING);
-                }
-            }
-        });
-        ctx.setPacketHandled(true);
-    }
+	public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
+		NetworkEvent.Context ctx = contextSupplier.get();
+		ctx.enqueueWork(() -> {
+			ServerPlayer player = ctx.getSender();
+			if (player == null) return;
+			if (!(player.serverLevel().getBlockEntity(pos) instanceof ComputerBlockEntity computer)) return;
+			if (computer.getBootState() != BootState.POST) return;
+
+			computer.setBootState(BootState.RUNNING);
+
+			ModMessages.sendToPlayer(
+				new ClientboundTerminalStatePacket(
+					pos, false, List.of(), 0, computer.getFileSystem().getCurrentPath()),
+				player);
+
+			List<String> bootLines = computer.getMachineType().osBootLines();
+			if (!bootLines.isEmpty()) {
+				String text = String.join("\n", bootLines) + "\n";
+				ModMessages.sendToPlayer(
+					new ClientboundTerminalOutputPacket(text,computer.getFileSystem().getCurrentPath()),
+					player)
+			}
+		});
+		ctx.setPacketHandled(true);
+	}
 }
