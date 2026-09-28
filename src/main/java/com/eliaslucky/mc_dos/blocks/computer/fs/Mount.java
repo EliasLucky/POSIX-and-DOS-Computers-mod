@@ -9,7 +9,20 @@ import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
  * CD's files — under an identifier. On DOS the identifier is a drive
  * letter ({@code "A:"}); on POSIX it's an absolute path
  * ({@code "/mnt/floppy"}).
+ * 
+ * <h2>Persistence</h2>
+ * Every mount has a {@linkplain #persistent() persistent} flag.
+ * Persistent mounts are owned by the block entity and are saved into
+ * its NBT. Transient mounts are owned by some other object — a
+ * {@code RemovableMediaItem} in a drive bay, an addon's own block
+ * entity — and are <em>not</em> saved with the machine.
  *
+ * <p>The distinction matters because a floppy disk's tree lives on the
+ * item stack that holds it. If the block entity also saved that tree,
+ * ejecting and editing the disk would leave two copies that drift.
+ * Only the primary volume and any other persistent volumes are the
+ * block entity's responsibility.
+ * 
  * <p>Each mount carries a {@link MountUsage} that tracks its byte and
  * entry usage. Callers that mutate a mounted tree should update
  * {@code usage()} accordingly.
@@ -23,6 +36,7 @@ public final class Mount {
     private final String source;
     private final long capacityBytes;
     private final int maxEntries;
+    private final boolean persistent;
     private final MountUsage usage;
 
     /**
@@ -38,23 +52,44 @@ public final class Mount {
                  boolean readOnly,
                  String source,
                  long capacityBytes,
-                 int maxEntries) {
+                 int maxEntries,
+                 boolean persistent) {
         this.id = id;
         this.rootNode = rootNode;
         this.readOnly = readOnly;
         this.source = source;
         this.capacityBytes = capacityBytes;
         this.maxEntries = maxEntries;
+        this.persistent = persistent;
         this.usage = new MountUsage(rootNode);
     }
 
-    public String id()                       { return id; }
+    /** @return the mount identifier. */
+    public String id() { return id; }
+
+    /** @return the root node of the mounted tree. */
     public VirtualFileSystem.Node rootNode() { return rootNode; }
-    public boolean readOnly()                { return readOnly; }
-    public String source()                   { return source; }
-    public long capacityBytes()              { return capacityBytes; }
-    public int maxEntries()                  { return maxEntries; }
-    public MountUsage usage()                { return usage; }
+
+    /** @return whether the volume rejects writes. */
+    public boolean readOnly() { return readOnly; }
+
+    /** @return the human description, e.g. {@code "primary volume"}. */
+    public String source() { return source; }
+
+    /** @return the byte capacity, or {@code 0} for unlimited. */
+    public long capacityBytes() { return capacityBytes; }
+
+    /** @return the entry limit, or {@code 0} for unlimited. */
+    public int maxEntries() { return maxEntries; }
+
+    /**
+     * @return {@code true} if this mount is owned by the block entity
+     *         and should be saved in the block's NBT.
+     */
+    public boolean persistent() { return persistent; }
+
+    /** @return the usage counter for this mount. */
+    public MountUsage usage() { return usage; }
 
     /** @return bytes still available, or {@link Long#MAX_VALUE} if unlimited. */
     public long freeBytes() {

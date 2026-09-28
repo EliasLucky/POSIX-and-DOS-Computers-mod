@@ -37,12 +37,7 @@ public class VirtualFileSystem {
 	public FileNamePolicy getPolicy()		   { return policy; }
 	public void setPolicy(FileNamePolicy p)    { this.policy = p; }
 	public String canonicalize(String rawName) { return policy.canonicalize(rawName); }
-	//public Node newFile(String rawName) {
-	//	return new Node(policy.canonicalize(rawName), false);
-	//}
-	//public Node newDirectory(String rawName) {
-	//	return new Node(policy.canonicalize(rawName), true);
-	//}
+
 	public Node getRoot() { return root; }
 	public Node getCurrentDir() { return currentDir; }
 	public String getCurrentPath() { return currentPath; }
@@ -292,32 +287,168 @@ public class VirtualFileSystem {
 
 	    return writeFile(to, src.content);
 	}
+	/**
+     * Attach a volume to the file system. This is the full-featured
+     * variant; callers that want to make the persistent/transient
+     * distinction explicit should use {@link #mountPersistent} or
+     * {@link #mountTransient} instead.
+     *
+     * @param id            mount identifier
+     * @param rootNode      root of the mounted tree
+     * @param readOnly      whether the volume rejects writes
+     * @param source        human description
+     * @param capacityBytes byte limit, or 0 for unlimited
+     * @param maxEntries    entry limit, or 0 for unlimited
+     * @param persistent    whether the block entity owns and saves this mount
+     * @return the new mount
+     */
+    public Mount mount(String id, Node rootNode, boolean readOnly, String source,
+                       long capacityBytes, int maxEntries, boolean persistent) {
+        Mount m = new Mount(id, rootNode, readOnly, source,
+                capacityBytes, maxEntries, persistent);
+        mounts.put(id, m);
+        return m;
+    }
+
+    /**
+     * Attach a persistent volume. Persistent volumes are saved into the
+     * block entity's NBT and restored on load.
+     *
+     * <p>Called by the block entity during setup for the primary
+     * hard disk. An addon that ships a machine with two internal disks
+     * calls this twice with different IDs.
+     *
+     * @param id       mount identifier, e.g. {@code "C:"} or {@code "/"}
+     * @param rootNode root of the volume
+     * @return the new mount
+     */
+    public Mount mountPersistent(String id, Node rootNode) {
+        return mount(id, rootNode, false, "persistent volume", 0, 0, true);
+    }
+
+    /**
+     * Attach a transient volume. Transient volumes are <em>not</em>
+     * saved with the block entity — the object that owns them is
+     * responsible for persisting their content.
+     *
+     * <p>Floppies, CDs, and channel-attached disks are all transient.
+     * The item stack in the drive bay saves the floppy's tree; the
+     * addon's own block entity saves the channel disk's tree.
+     *
+     * @param id            mount identifier
+     * @param rootNode      root of the volume
+     * @param readOnly      whether the volume rejects writes
+     * @param source        human description
+     * @param capacityBytes byte limit, or 0 for unlimited
+     * @param maxEntries    entry limit, or 0 for unlimited
+     * @return the new mount
+     */
+    public Mount mountTransient(String id, Node rootNode, boolean readOnly, String source,
+                                long capacityBytes, int maxEntries) {
+        return mount(id, rootNode, readOnly, source,
+                capacityBytes, maxEntries, false);
+    }
+
+    /** Remove a mount. The mounted tree is untouched; the caller owns it. */
+    public void unmount(String id) { mounts.remove(id); }
+
+    /** @return the mount with this ID, or {@code null}. */
+    public Mount findMount(String id) { return mounts.get(id); }
+
+    /**
+     * @param node a node in the VFS
+     * @return the mount whose tree contains {@code node}, or {@code null}
+     *         if the node is not on any mounted volume
+     */
+    public Mount findMountFor(VirtualFileSystem.Node node) {
+        if (node == null) return null;
+        VirtualFileSystem.Node top = node;
+        while (top != null && top.parent != null) top = top.parent;
+        for (Mount m : mounts.values()) {
+            if (m.rootNode() == top) return m;
+        }
+        return null;
+    }
+
+    /** @return all current mounts, immutable view. */
+    public Map<String, Mount> mounts() { return Map.copyOf(mounts); }
+
+    /**
+     * Serialize the persistent volumes and the current working directory.
+     *
+     * <p>Only mounts with {@code persistent == true} are written. A
+     * floppy's tree lives on the item stack that holds it; the block
+     * entity must not duplicate that data here, or the two copies
+     * would drift after ejection.
+     *
+     * @return the NBT representation
+     */
 	public CompoundTag serializeNBT() {
 		CompoundTag tag = new CompoundTag();
-		Mount primary = findPersistentMount();
-	    if (primary != null) {
-	        tag.putString("PrimaryMountId", primary.id());
-	        tag.put("PrimaryTree", primary.rootNode().save());
-	    }
+		ListTag mountsTag = new ListTag();
+        for (Mount m : mounts.values()) {
+            if (!m.persistent()) continue;
+
+            CompoundTag one = new CompoundTag();
+            one.putString("Id", m.id());
+            one.putBoolean("ReadOnly", m.readOnly());
+            one.putString("Source", m.source());
+            one.putLong("Capacity", m.capacityBytes());
+            one.putInt("MaxEntries", m.maxEntries());
+            one.put("Tree", m.rootNode().save());
+            mountsTag.add(one);
+        }
+        tag.put("PersistentMounts", mountsTag);
 		tag.putString("CurrentPath", currentPath);
 		return tag;
 	}
 
-	public void deserializeNBT(CompoundTag tag) {
-		if (tag.contains("Root")) {
-			Node loadedRoot = Node.load(tag.getCompound("Root"),null);
-			this.root.children.clear();
-			this.root.children.putAll(loadedRoot.children);
-			reparentChildren(this.root);
-		}
-		this.currentDir = root;
-	    this.currentPath = "/";
-		//if (tag.contains("CurrentPath")) {
-		//	this.currentPath = tag.getString("CurrentPath");
-		//	Node found = resolvePath(this.currentPath);
-		//	this.currentDir = (found != null && found.isDirectory) ? found : root;
-		//}
-	}
+	/**
+     * Restore persistent volumes from NBT.
+     *
+     * <p>Transient mounts are not restored here the block entity
+     * re-attaches them as it re-loads its drive bays (or the addon
+     * re-attaches its own volumes). The VFS ends up in a state where
+     * only the persistent volumes are known, and the caller layers
+     * the rest on top.
+     *
+     * @param tag the saved state
+     */
+    public void deserializeNBT(CompoundTag tag) {
+        mounts.clear();
+
+        ListTag mountsTag = tag.getList("PersistentMounts", Tag.TAG_COMPOUND);
+        for (int i = 0; i < mountsTag.size(); i++) {
+            CompoundTag one = mountsTag.getCompound(i);
+
+            Node tree = Node.load(one.getCompound("Tree"), null);
+            reparentChildren(tree);
+
+            mount(
+                    one.getString("Id"),
+                    tree,
+                    one.getBoolean("ReadOnly"),
+                    one.getString("Source"),
+                    one.getLong("Capacity"),
+                    one.getInt("MaxEntries"),
+                    true);
+        }
+
+        // Restore the working directory. If it no longer resolves —
+        // because the volume layout changed, or the mount is missing —
+        // fall back to any available mount root, then to the phantom
+        // VFS root as a last resort.
+        String saved = tag.getString("CurrentPath");
+        if (saved != null && setCurrentPath(saved)) return;
+
+        for (Mount m : mounts.values()) {
+            currentDir = m.rootNode();
+            currentPath = m.id();
+            return;
+        }
+        currentDir = root;
+        currentPath = "/";
+    }
 	
 	private static void reparentChildren(Node parent) {
 	    for (Node child : parent.children.values()) {
@@ -361,37 +492,6 @@ public class VirtualFileSystem {
 		if (base.isEmpty() && ext.isEmpty()) return "";
 		return ext.isEmpty() ? base : base + "." + ext;
 	}
-	
-	/**
-	 * Attach a volume to the file system.
-	 *
-	 * @param id        the mount identifier: {@code "A:"} on DOS, or
-	 *                  {@code "/mnt/floppy"} on POSIX
-	 * @param rootNode  the root of the mounted tree
-	 * @param readOnly  whether the volume rejects writes
-	 * @param source    a descriptive source, e.g. {@code "floppy bay 0"}
-	 */
-	public Mount mount(String id, Node rootNode, boolean readOnly, String source, long capacityBytes, int maxEntries) {
-Mount m = new Mount(id, rootNode, readOnly, source, capacityBytes, maxEntries);
-mounts.put(id, m);
-return m;
-}
-
-	/** Remove a mount. The mounted tree is untouched; the caller owns it. */
-	public void unmount(String id) { mounts.remove(id); }
-
-	/** @return the mount with this ID, or {@code null}. */
-	public Mount findMount(String id) { return mounts.get(id); }
-	public Mount findMountFor(VirtualFileSystem.Node node) {
-	    // walk up to topmost ancestor, match against mount roots
-	    VirtualFileSystem.Node top = node;
-	    while (top != null && top.parent != null) top = top.parent;
-	    for (Mount m : mounts.values()) if (m.rootNode() == top) return m;
-	    return null;
-	}
-
-	/** @return all current mounts. */
-	public Map<String, Mount> mounts() { return Map.copyOf(mounts); }
 
 	public static class Node {
 		public String name;

@@ -168,9 +168,7 @@ public class ComputerBlockEntity extends BlockEntity {
 
     // Default setup
     private void setupDefaultFiles() {
-        VirtualFileSystem vfs = fileSystem;
-        vfs.getRoot().children.clear();
-        VirtualFileSystem.Node primaryRoot = new VirtualFileSystem.Node("/", true);
+        VirtualFileSystem.Node primaryTree = new VirtualFileSystem.Node("/", true);
 
         ICommandProcessor proc = machineType.commandProcessor();
 
@@ -179,9 +177,9 @@ public class ComputerBlockEntity extends BlockEntity {
             String[] segments = normalized.split("/");
             boolean isDir = filePath.endsWith("/") || filePath.endsWith("\\");
 
-            VirtualFileSystem.Node dir = vfs.getRoot();
+            VirtualFileSystem.Node dir = primaryTree;
             for (int i = 0; i < segments.length - 1; i++) {
-                String segName = vfs.canonicalize(segments[i]);
+                String segName = fileSystem.canonicalize(segments[i]);
                 VirtualFileSystem.Node existing = dir.children.get(segName);
                 if (existing == null) {
                     existing = new VirtualFileSystem.Node(segName, true);
@@ -190,7 +188,7 @@ public class ComputerBlockEntity extends BlockEntity {
                 dir = existing;
             }
 
-            String fileName = vfs.canonicalize(segments[segments.length - 1]);
+            String fileName = fileSystem.canonicalize(segments[segments.length - 1]);
             if (dir.children.containsKey(fileName)) continue;
 
             VirtualFileSystem.Node node = new VirtualFileSystem.Node(fileName, isDir);
@@ -208,12 +206,16 @@ public class ComputerBlockEntity extends BlockEntity {
             }
             dir.addChild(node);
         }
-     // Mount it at the primary mount point for the OS family.
-        // DOS: "C:", POSIX: "/"
-        String mountId = machineType.defaultPath().startsWith("/") ? "/" : "C:";
-        fileSystem.mount(mountId, primaryRoot, false, "primary volume",
-                         /*capacity: unlimited*/ 0, 0);
-        vfs.setCurrentPath(machineType.defaultPath());
+
+        // Mount the primary tree at the ID that matches the machine type's
+        // default path. DOS paths start with a drive letter ("C:\"),
+        // POSIX paths start with "/" — the primary mount point follows the
+        // same convention.
+        String primaryMountId = machineType.defaultPath().startsWith("/") ? "/" : "C:";
+        fileSystem.mountPersistent(primaryMountId, primaryTree);
+
+        // Set the working directory into the newly mounted tree.
+        fileSystem.setCurrentPath(machineType.defaultPath());
     }
 
     private void setupEnvironment() {
@@ -253,14 +255,22 @@ public class ComputerBlockEntity extends BlockEntity {
             if (!bay.insert(stack, root)) continue;
 
             if (bay.dosLetter() != null) {
-                fileSystem.mount(bay.dosLetter() + ":", root,
-                        !rmi.writable(), "floppy bay " + bay.index(),
-                        rmi.media().capacityBytes(), rmi.media().maxEntries());
+                fileSystem.mountTransient(
+                        bay.dosLetter() + ":",
+                        root,
+                        !rmi.writable(),
+                        "floppy bay " + bay.index(),
+                        rmi.media().capacityBytes(),
+                        rmi.media().maxEntries());
             }
             if (bay.posixMountPoint() != null && bay.isPosixMounted()) {
-                fileSystem.mount(bay.posixMountPoint(), root,
-                        !rmi.writable(), "floppy bay " + bay.index(),
-                        rmi.media().capacityBytes(), rmi.media().maxEntries());
+                fileSystem.mountTransient(
+                        bay.posixMountPoint(),
+                        root,
+                        !rmi.writable(),
+                        "floppy bay " + bay.index(),
+                        rmi.media().capacityBytes(),
+                        rmi.media().maxEntries());
             }
 
             stack.shrink(1);
