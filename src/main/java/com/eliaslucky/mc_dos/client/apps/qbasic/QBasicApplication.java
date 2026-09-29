@@ -141,7 +141,30 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     public boolean keyPressed(int key, int scan, int mods) {
         boolean isAltKey = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
         boolean altMod   = (mods & GLFW.GLFW_MOD_ALT) != 0;
-        altHeld = isAltKey || altMod;
+
+	if (isAltKey) {
+		if (!altHeld) {
+			altHeld = true;
+			if (mode == Mode.EDITOR) {
+				menuBar.open();
+				mode = Mode.MENU;
+			}
+			else if (mode == Mode.MENU) {
+				menuBar.close();
+				mode = Mode.EDITOR;
+			}
+		}i
+		return true;
+	}
+
+	if (altMod) {
+		int letter = letterFromKey(key);
+		if (letter >= 0 && menuBar.openByMnemonic((char) letter)) {
+			mode = Mode.MENU;
+			return true;
+		}
+		return false;
+	}
 
         switch (mode) {
 	        case RUNNING:
@@ -253,7 +276,6 @@ public class QBasicApplication extends AbstractEditorApplication implements File
     public boolean keyReleased(int key, int scan, int mods) {
         if (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT) {
             altHeld = false;
-            menuBar.handleAltKey(false);
         }
         return super.keyReleased(key, scan, mods);
     }

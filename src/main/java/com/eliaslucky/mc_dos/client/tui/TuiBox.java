@@ -75,6 +75,15 @@ public class TuiBox implements TuiWidget {
 	public TuiBox fill(int c) { this.bgColor = c; this.filled = true; return this; }
 
 	/**
+	 * Set the interior transparent.
+	 * @return this box, for chaining
+	 * */
+	public TuiBox transparent() {
+		this.filled = false;
+		return this;
+	}
+
+	/**
 	 * Pull the border and interior colors from a theme. Overrides any
 	 * previous calls to {@link #border(int)} or {@link #fill(int)}
 	 *
@@ -101,12 +110,12 @@ public class TuiBox implements TuiWidget {
 		int ph = height * TerminalApplication.CELL_H;
 
 		// Interior fill (below the border glyphs).
-		if (bgColor >= 0) {
+		if (filled) {
 			g.fill(px + TerminalApplication.CELL_W,
-					py + TerminalApplication.CELL_H,
-					px + pw - TerminalApplication.CELL_W,
-					py + ph - TerminalApplication.CELL_H,
-					bgColor);
+				py + TerminalApplication.CELL_H,
+				px + pw - TerminalApplication.CELL_W,
+				py + ph - TerminalApplication.CELL_H,
+				bgColor);
 		}
 
 		// Pick the box-drawing glyph set.

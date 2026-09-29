@@ -37,8 +37,8 @@ public final class TuiThemes {
     public static final TuiTheme QBASIC = new TuiTheme(
             TuiPalette.BLUE,         TuiPalette.LIGHT_GRAY,
             TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,
-            TuiPalette.BLUE,         TuiPalette.WHITE,       TuiPalette.YELLOW,
-            TuiPalette.BLUE,         TuiPalette.BLACK,
+            TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,       TuiPalette.RED,
+            TuiPalette.LIGHT_GRAY,         TuiPalette.BLACK,
             TuiPalette.LIGHT_GRAY,   TuiPalette.BLACK,
             TuiPalette.WHITE,
             TuiPalette.DARK_GRAY,

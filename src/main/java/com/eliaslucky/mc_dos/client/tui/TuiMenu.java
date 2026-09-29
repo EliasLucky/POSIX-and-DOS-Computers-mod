@@ -49,7 +49,7 @@ public class TuiMenu implements TuiWidget {
 	private int selectedMenu = -1;
 	private int selectedItem = -1;
 	private Consumer<String> onAction;
-	private boolean altWasDown = false;
+	
 	/**
 	 * @param row	the row the menu bar occupies (usually 0)
 	 * @param menus the menu tree
@@ -129,8 +129,9 @@ public class TuiMenu implements TuiWidget {
 						y + TerminalApplication.CELL_H,
 						t.highlightBg());
 			}
-			app.drawDos(g, m.label(), px, y,
-					hot ? t.highlightFg() : t.titleFg());
+			drawLabelWithMnemonic(g,app, m.label(),m.mnemonic(), px, y,
+					hot ? t.highlightFg() : t.titleFg(),
+					hot ? t.highlightMn() : t.titleFg());
 			col += m.label().length() + 3;
 		}
 	}
@@ -173,18 +174,33 @@ public class TuiMenu implements TuiWidget {
 			Item it = m.items().get(i);
 			int iy = (dy + 1 + i) * TerminalApplication.CELL_H;
 			boolean hot = i == selectedItem;
-
+			int fg = hot ? t.highlightFg() : t.titleFg();
 			if (hot) {
 				g.fill(dx * TerminalApplication.CELL_W, iy,
 					   (dx + w) * TerminalApplication.CELL_W,
 					   iy + TerminalApplication.CELL_H,
 					   t.highlightBg());
 			}
-			app.drawDos(g, it.label(),
+			drawLabelWithMnemonic(g,app, it.label(),it.mnemonic(),
 					(dx + 1) * TerminalApplication.CELL_W, iy,
-					hot ? t.highlightFg() : t.titleFg());
+					fg, t.highlightMn());
 		}
 	}
+	private void drawLabelWithMnemonic(GuiGraphics g, TerminalApplication app, String label, char mnemonic, int x, int y, int fg, int mnemColor) {
+		app.drawDos(g,label,x,y,fg);
+		int idx = -1;
+		for (int i = 0; i < label.length(); i++) {
+			if (Character.toUpperCase(label.charAt(i)) == Character.toUpperCase(mnemonic)) {
+				idx = i;
+				break;
+			}
+		}
+		if (idx < 0) return;
+
+		int cellX = x + idx * TerminalApplication.CELL_W;
+		app.drawDos(g,String.valueOf(label.charAt(idx)),cellX,y,mnemColor);
+	}
+
 	@Override
 	public boolean keyPressed(int key, int scan, int mods) {
 		if (!active) return false;
@@ -230,42 +246,8 @@ public class TuiMenu implements TuiWidget {
 					}
 				}
 			}
-			// Fall back to top-level mnemonics.
 			return openByMnemonic(c);
 		}
 		return false;
-	}
-	/**
-	 * Handle an ALT key state change from the app. Call from both
-	 * {@code keyPressed} and {@code keyReleased}:
-	 *
-	 * <pre>{@code
-	 * boolean isAlt = (key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT);
-	 * if (isAlt && menuBar.handleAltKey(pressed)) {
-	 *	   mode = menuBar.isOpen() ? Mode.MENU : Mode.EDITOR;
-	 *	   return true;
-	 * }
-	 * }</pre>
-	 *
-	 * <p>Only the rising edge of ALT toggles the menu. Falling edges just
-	 * clear the internal flag, so the next press is another rising edge.
-	 *
-	 * @param currentlyDown whether ALT is down right now
-	 * @return {@code true} if the menu was toggled
-	 */
-	public boolean handleAltKey(boolean currentlyDown) {
-		if (currentlyDown && !altWasDown) {
-			altWasDown = true;
-			if (active) {
-				close();
-			} else {
-				open();
-			}
-			return true;
-		}
-		if (!currentlyDown) {
-			altWasDown = false;
-		}
-		return false;
-	}
+	}	
 }
