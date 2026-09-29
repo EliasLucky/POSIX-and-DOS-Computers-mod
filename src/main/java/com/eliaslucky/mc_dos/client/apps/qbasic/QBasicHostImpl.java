@@ -58,46 +58,46 @@ public class QBasicHostImpl implements Host {
 	@Override public void setPixel(int x, int y, int c) {
 		int ax = x + viewportOffsetX;
 		int ay = y + viewportOffsetY;
-		if (viewport != null) {
-			if (ax < viewport[0] || ax > viewport[2] || ay < viewport[1] || ay > viewport[3]) return;
-		}
-		app.getDisplayMode().setPixel(ax, ay, c);
+		plot(ax, ay, c);
 	}
 	@Override public void pset(int x, int y, int c)		{ setPixel(x, y, c); }
 
 	@Override public void drawLine(int x1, int y1, int x2, int y2, int c, int style) {
 		// Bresenham
-		int dx = Math.abs(x2 - x1), dy = Math.abs(y2 - y1);
-		int sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1;
+		int sx = x1 + viewportOffsetX, sy = y1 + viewportOffsetY;
+		int ex = x2 + viewportOffsetX, ey = y2 + viewportOffsetY;
+
+		int dx = Math.abs(ex - sx), dy = Math.abs(ey - sy);
+		int stepX = sx < ex ? 1 : -1, stepY = sy < ey ? 1 : -1;
 		int err = dx - dy;
-		var d = app.getDisplayMode();
+		int cx = sx, cy = sy;
 
 		while (true) {
-			d.setPixel(x1, y1, c);
-			if (x1 == x2 && y1 == y2) break;
+			plot(cx, cy, c);
+			if (cx == ex && cy == ey) break;
 			int e2 = 2 * err;
-			if (e2 > -dy) { err -= dy; x1 += sx; }
-			if (e2 <  dx) { err += dx; y1 += sy; }
+			if (e2 > -dy) { err -= dy; cx += stepX; }
+			if (e2 <  dx) { err += dx; cy += stepY; }
 		}
 	}
 	@Override public void circle(int cx, int cy, int r, int c, boolean filled) {
 		if (r < 0) return;
-		var d = app.getDisplayMode();
+		int scx = cx + viewportOffsetX, scy = cy + viewportOffsetY;
 
 		// Midpoint circle
 		int x = r, y = 0, err = 1 - r;
 		while (x >= y) {
 			if (filled) {
-				for (int xx = cx - x; xx <= cx + x; xx++) {
-					d.setPixel(xx, cy + y, c);
-					d.setPixel(xx, cy - y, c);
+				for (int xx = scx - x; xx <= scx + x; xx++) {
+					plot(xx, scy + y, c);
+					plot(xx, scy - y, c);
 				}
-				for (int xx = cx - y; xx <= cx + y; xx++) {
-					d.setPixel(xx, cy + x, c);
-					d.setPixel(xx, cy - x, c);
+				for (int xx = scx - y; xx <= scx + y; xx++) {
+					plot(xx, scy + x, c);
+					plot(xx, scy - x, c);
 				}
 			} else {
-				plot8(cx, cy, x, y, c);
+				plot8(scx, scy, x, y, c);
 			}
 			y++;
 			if (err < 0) err += 2 * y + 1;
@@ -105,15 +105,20 @@ public class QBasicHostImpl implements Host {
 		}
 	}
 	private void plot8(int cx, int cy, int x, int y, int color) {
-		var d = app.getDisplayMode();
-		d.setPixel(cx + x, cy + y, color);
-		d.setPixel(cx - x, cy + y, color);
-		d.setPixel(cx + x, cy - y, color);
-		d.setPixel(cx - x, cy - y, color);
-		d.setPixel(cx + y, cy + x, color);
-		d.setPixel(cx - y, cy + x, color);
-		d.setPixel(cx + y, cy - x, color);
-		d.setPixel(cx - y, cy - x, color);
+		plot(cx + x, cy + y, color);
+		plot(cx - x, cy + y, color);
+		plot(cx + x, cy - y, color);
+		plot(cx - x, cy - y, color);
+		plot(cx + y, cy + x, color);
+		plot(cx - y, cy + x, color);
+		plot(cx + y, cy - x, color);
+		plot(cx - y, cy - x, color);
+	}
+	private void plot(int sx,int sy, int color) {
+		if (viewport != null) {
+			if (sx < viewport[0] || sx > viewport[2] || sy < viewport[1] || sy > viewport[3]) return;
+		}
+		app.getDisplayMode().setPixel(sx,sy,color);
 	}
 	@Override public int colorFg() { return fg; }
 	@Override public void locate(int row, int col) {
@@ -142,8 +147,8 @@ public class QBasicHostImpl implements Host {
 
 		// VIEW SCREEN coordinates are relative to the viewport's top-left
 		// VIEW coordinates absolute
-		this.viewportOffsetX = screen ? vx1 : 0;
-		this.viewportOffsetY = screen ? vy1 : 0;
+		this.viewportOffsetX = screen ? 0 : vx1;
+		this.viewportOffsetY = screen ? 0 : vy1;
 
 		if (borderColor >= 0) {
 			// Draw the border rectangle in the border color.

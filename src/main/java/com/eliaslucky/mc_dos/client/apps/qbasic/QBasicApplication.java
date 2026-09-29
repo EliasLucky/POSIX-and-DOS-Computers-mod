@@ -34,6 +34,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 	private boolean altHeld = false;
 	private boolean consumingMenuKeystroke = false;
 	private boolean pendingExit = false;
+	private boolean keyEnqueuedInKeyPressed = false;
 
 	// Snapshot of the source so we can restore the editor after the run.
 	private String pendingSourceSnapshot;
@@ -195,6 +196,13 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 					if (arrow != null) {
 						host.enqueueKey(arrow);
 					}
+					else if (runState != RunState.WAITING_INPUT) {
+						char c = keyCodeToChar(key,mods);
+						if (c != 0) {
+							host.enqueueKey(String.valueOf(c));
+							keyEnqueuedInKeyPressed = true;
+						}
+					}
 				}
 				return true;
 			case RUN_OUTPUT:
@@ -236,6 +244,19 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 				return super.keyPressed(key, scan, mods);
 		}
 		return false;
+	}
+	private static char keyCodeToChar(int key, int mods) {
+		if (key >= GLFW.GLFW_KEY_A && key <= GLFW.GLFW_KEY_Z) {
+			char c = (char) ('a' + (key - GLFW.GLFW_KEY_A));
+			if ((mods & GLFW.GLFW_MOD_SHIFT) != 0) c = Character.toUpperCase(c);
+			return c;
+		}
+		if (key >= GLFW.GLFW_KEY_0 && key <= GLFW.GLFW_KEY_9) {
+			if ((mods & GLFW.GLFW_MOD_SHIFT) != 0) return ")!@#$%^&*(".charAt(key-GLFW.GLFW_KEY_0);
+			return (char) ('0' + (key - GLFW.GLFW_KEY_0));
+		}
+		if (key == GLFW.GLFW_KEY_SPACE) return ' ';
+		return 0;
 	}
 	/**
 	 * Maps a GLFW arrow key to the two-character sequence QBasic's
@@ -362,7 +383,12 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 				inputBuffer.append(cp);
 				host.print(String.valueOf(cp));
 			} else {
-				host.enqueueKey(String.valueOf(cp));
+				if (keyEnqueuedInKeyPressed) {
+					keyEnqueuedInKeyPressed = false;
+				}
+				else {
+					host.enqueueKey(String.valueOf(cp));
+				}
 			}
 			return true;
 		}
