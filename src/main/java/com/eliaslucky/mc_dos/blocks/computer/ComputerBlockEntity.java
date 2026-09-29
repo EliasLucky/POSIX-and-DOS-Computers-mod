@@ -381,10 +381,17 @@ public class ComputerBlockEntity extends BlockEntity {
 			this.machineType = resolved;
 		}
 
+		fileSystem.setPolicy(machineType.commandProcessor().fileNamePolicy());
 		this.initializedDefaults = tag.getBoolean("InitializedDefaults");
 
 		if (tag.contains("FileSystem")) {
 			fileSystem.deserializeNBT(tag.getCompound("FileSystem"));
+		}
+		else if (!initializedDefaults) {
+			// Very edge case: entity was saved before defaults were created
+			setupDefaultFiles();
+			setupEnvironment();
+			initializedDefaults = true;
 		}
 
 		if (tag.contains("Environment")) {
