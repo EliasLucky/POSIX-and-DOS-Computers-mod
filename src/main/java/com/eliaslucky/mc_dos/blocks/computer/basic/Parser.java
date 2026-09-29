@@ -328,7 +328,7 @@ public class Parser {
 			advance();
 			if (!atEndOfStatement()) vpage = parseExpr();
 		}
-		skipLine();
+		//skipLine();
 		return new ScreenStmt(line, mode, color, apage, vpage);
 	}
 	private boolean peekIsPunct(String s) {
@@ -693,7 +693,7 @@ public class Parser {
 				border = parseExpr();
 			}
 		}
-		skipLine();
+		//skipLine();
 		return new ViewStmt(line, x1, y1, x2, y2, fill, border, false);
 	}
 	private Statement parseDefFn(int line) {
@@ -708,7 +708,7 @@ public class Parser {
 		expectPunct(")");
 		expectOp("=");
 		Expression body = parseExpr();
-		skipLine();
+		//skipLine();
 		return new DefFnStmt(line, nameTok.text(), params, body);
 	}
 
@@ -752,7 +752,7 @@ public class Parser {
 			while (peekIsPunct(",")) { advance(); args.add(parseExpr()); }
 		}
 		expectPunct(")");
-		skipLine();
+		//skipLine();
 		return new CallStmt(line, nameTok.text(), args);
 	}
 

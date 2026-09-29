@@ -182,7 +182,7 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 			
 			g.fill((boxCol+1) * CELL_W,y,
 				(boxCol+boxW-1) * CELL_W,y+CELL_H,
-				hot ? fg : fg);
+				hot ? fg : bg);
 			
 			int textFg = hot ? bg : fg;
 			

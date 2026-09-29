@@ -51,9 +51,9 @@ record InputStmt(int line, String prompt, List<String> targets) implements State
 		// First execution: print prompt, request input, pc stays put.
 		if (!ctx.hasInputValue()) {
 			if (!prompt.isEmpty()) host.print(prompt);
-				ctx.requestInput();
-				return;
-			}
+			ctx.requestInput();
+			return;
+		}
 
 		// Resumed: consume the supplied line and assign to each target.
 		String raw = ctx.consumeInput();

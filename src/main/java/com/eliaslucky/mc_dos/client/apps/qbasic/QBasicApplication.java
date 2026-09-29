@@ -205,7 +205,7 @@ public class QBasicApplication extends AbstractEditorApplication implements File
 			case MENU: {
 				if (menuBar.keyPressed(key, scan, mods)) {
 					if (isPrintableKey(key)) consumingMenuKeystroke = true;
-					if (!menuBar.isOpen()) mode = Mode.EDITOR;
+					if (!menuBar.isOpen() && mode == Mode.MENU) mode = Mode.EDITOR;
 					return true;
 				}
 				return true;
