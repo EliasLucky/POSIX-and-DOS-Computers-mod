@@ -19,17 +19,17 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 	private final TuiScreen widgets = new TuiScreen();
 	private final String biosName;
 
+	private List<TuiKeyValueTable.Row> currentRows = List.of();
+
 	public IbmAtBiosSetupApplication(ComputerTerminalScreen screen, MachineConfig config, String biosName) {
 		super(screen);
 		this.original = config;
 		this.config = config;
 		this.biosName = biosName;
 
-		this.table = new TuiKeyValueTable(3, 3, 62, 11);
+		this.table = new TuiKeyValueTable(0, 0, 1, 1);
 		rebuildTable();
 		table.onAction(this::editField);
-		widgets.add(table);
-		widgets.setFocus(table);
 	}
 
 	private void rebuildTable() {
@@ -49,34 +49,144 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 
 	@Override
 	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-		g.fill(0, 0, appWidth, appHeight, TuiPalette.LIGHT_GRAY);
+		final int W = cols();
+		final int H = rows();
+		final int fg = TuiPalette.WHITE;
+		final int bg = TuiPalette.BLACK;
 
-		// Title bar
-		g.fill(0, 0, appWidth, CELL_H, TuiPalette.BLACK);
-		drawDos(g, "[ " + biosName + " ]   [ Generic SETUP Version 3.0 2/88 ]",
-				0, 0, TuiPalette.LIGHT_GRAY);
+		g.fill(0, 0, appWidth, appHeight, bg);
 
-		// Framed table
-		TuiBox frame = new TuiBox(2, 2, 64, 15, TuiBox.Style.SINGLE)
-				.titled("Current SETUP Configuration");
-		frame.render(g, this);
+		// Outer frame
+		StringBuilder top = new StringBuilder(W);
+		top.append('\u250C');
+		for (int i = 0; i < W-2; i++) top.append('\u2500');
+		top.append('\u2510');
+		drawDos(g, top.toString(),0,0,fg);
 
-		// Table
-		table.render(g, this);
+		// Row H-1
+		StringBuilder bot = new StringBuilder(W);
+		bot.append('\u2514');
+		for (int i = 0; i < W-2; i++) bot.append('\u2500');
+		bot.append('\u2518');
+		drawDos(g, bot.toString(),0,(H-1)*CELL_H,fg);
 
-		// Status footer
-		int footY = (rows() - 1) * CELL_H;
-		g.fill(0, footY, appWidth, appHeight, TuiPalette.BLACK);
-		drawDos(g, "[ ESC ] Exit & Save   [ \u2191\u2193 ] Select	[ ENTER ] Change",
-				0, footY, TuiPalette.LIGHT_GRAY);
+		// Verticals on rows 1..H-2
+		for (int r=1; r < H-1; r++) {
+			drawDos(g, "\u2502", 0, r*CELL_H,fg);
+			drawDos(g, "\u2502", (W-1)*CELL_W,r*CELL_H,fg);
+		}
+
+		String leftText = "[ F1 HELP ]";
+		String centerText = "[ Generic SETUP version 3.0 Z/B8 ]";
+		String rightText = "[80286]";
+
+		int innerW = W-2;
+		int centerStart = 1+(innerW - centerText.length())/2;
+		int rightStart = W-2-rightText.length();
+		drawDos(g, leftText, CELL_W, CELL_H, fg);
+		drawDos(g, centerText, centerStart * CELL_W, CELL_H, fg);
+		drawDos(g, rightText, rightStart * CELL_W, CELL_H ,fg);
+
+		// Body shade fill
+		String shade = "\u2592".repeat(Math.max(0,W-2));
+		for (int r=2; r<H-1;r++) {
+			drawDos(g,shade,CELL_W,r*CELL_H,fg);
+		}
+		
+		// Double-bordered central box
+		renderBox(g, w);
 
 		// Dialogs on top
 		widgets.render(g, this);
 	}
 
+	private void renderBox(GuiGraphics g, int W) {
+		final int fg = TuiPalette.WHITE;
+		final int bg = TuiPalette.BLACK;
+
+		int boxW = Math.min(68,W-8);
+		int boxH = 13;
+
+		g.fill((boxCol+1)*CELL_W, (boxRow+1) * CELL_H,
+		       (bolxCol+boxW-1)*CELL_W, (boxRow + boxH - 1) * CELL_H,
+		       bg);
+		int interW = boxW -2;
+
+		String title = " Current SETUP Configuration ";
+		int titleStart = Math.max(0,(innerW-title.length())/2);
+		StringBuilder top = new StringBuilder(boxW);
+		tab.append('\u2554');
+		for (int = 0; i < innerW; i++) {
+			if (i >= titleStart && i < titleStart + title.length()) {
+				top.append(title.charAt(i-titleStart));
+			}
+			else {
+				top.append('\u2550');
+			}
+		}
+		top.append('\u2557');
+		drawDos(g,top.toString(),boxCol *CELL_W, boxRow*CELL_H,fg);
+
+		// Bottom border
+		StringBuilder bot = new StringBuilder(boxW);
+		bot.append('\u255A');
+		for (int i = 0; i < innerW; i++) bot.append('\u2550');
+		bot.append('\u255D');
+		drawDos(g,bot.toString(),boxCol*CELL_W,(boxRow+boxH-1)*CELL-H,fg);
+
+		// Side borders
+		for (int r = 1; r < boxH - 1; r++) {
+			int y = (boxRow+r)*CELL_H;
+			drawDos(g, "\u2551",boxCol*CELL_W,y,fg);
+			drawDos(g, "\u2551",(boxCol+boxW-1)*CELL_W,y,fg);
+		}
+
+		// divider column counted from the first interior cell.
+		// 42 of 66 puts it at ~63% across. which makes it seem like it's closer to the right side
+		int divInner = 42;
+
+		// Single-rule dash row. One space at each end (so the dashes don't touch the double border)
+		// and one at the divider column (so the vertica line below "meets" it with a gap)
+		StringBuilder dash = new StringBuilder(innerW);
+		for (int i = 0; i < innerW; i++) {
+			if (i==0 || i==innerW-1 || i == divInner) dash.append(' ');
+			else dash.append('\u2500');
+		}
+		drawDos(g,dash.toString(),(boxCol+1)*CELL_W,(boxRow+1)*CELL_H,fg);
+
+		// Data rows
+		int sel = table.selectedIndex();
+		int lastCol = boxCol + boxW-2;
+		int minVal = boxCol + 1 + divInner + 2;
+
+		for (int i = 0; i < currentRows.size(); i++) {
+			TuiKeyValueTable.Row row = currentRows.get(i);
+			int r = boxRow +2+i;
+			if (r >= boxRow + boxH-1) break;
+
+			int y = r*CELL_H;
+			boolean hot = (i == sel);
+			if (hot) {
+				g.fill
+
+			}
+			int textFg = hot ? bg : fg;
+			
+			// Left column: "[N] Key"
+			drawDos(g, "[" + i + "] " + row.key(),(boxCol+1)*CELL_W,y,textFg);
+			// Single-rule vertical split
+			drawDos(g, "\u2502", (boxCol+1+divInner)*CELL_W,y,textFg);
+			// Right column: value, right-aligned to the interior edge
+			String value = row.value();
+			int valueStart = lastCol - value.length() + 1;
+			if (valueStart < minVal) valueStart = minVal;
+			drawDos(g,value,valueStart * CELL_W, y, textFg);
+		}
+	}
+
 	@Override
 	public boolean keyPressed(int key, int scan, int mods) {
-		if (widgets.getFocus() instanceof TuiDialog) {
+		if (!widgets.widgets().isEmpty()) {
 			return widgets.keyPressed(key, scan, mods);
 		}
 
