@@ -33,7 +33,7 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 	}
 
 	private void rebuildTable() {
-		table.setRows(List.of(
+		currentRows = List.of(
 			new TuiKeyValueTable.Row("Time",			 config.timeString(),			true,  "edit.time"),
 			new TuiKeyValueTable.Row("Date",			 config.dateString(),			true,  "edit.date"),
 			new TuiKeyValueTable.Row("Floppy Disk A:",	 config.floppyA().displayName(),true,  "edit.floppyA"),
@@ -44,7 +44,8 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 			new TuiKeyValueTable.Row("Expansion Memory", config.extendedMemoryKb() + "K", false, null),
 			new TuiKeyValueTable.Row("Math Coprocessor", config.mathCoprocessor() ? "Installed" : "Not installed", false, null),
 			new TuiKeyValueTable.Row("Primary Display",  config.primaryDisplay().displayName(), true, "edit.display")
-		));
+		);
+		table.setRows(currentRows);
 	}
 
 	@Override
