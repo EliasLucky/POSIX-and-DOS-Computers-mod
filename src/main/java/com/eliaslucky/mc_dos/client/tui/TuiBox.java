@@ -128,14 +128,41 @@ public class TuiBox implements TuiWidget {
 			hz = '\u2500'; vt = '\u2502';
 		}
 
-		// Top and bottom borders.
+		StringBuilder top = new StringBuilder(width);
+		top.append(tl);
+
+		String display = null;
+		int titleStart = -1;
+		int titleLen = 0;
+		if (title != null && !title.isEmpty() && width > 2) {
+			int maxTitle = width-2;
+			String text = title;
+			if (text.length()+2 > maxTitle) {
+				text = text.substring(0,Math.max(0,maxTitle-2));
+			}
+			display = " " + text + " ";
+			titleLen = display.length();
+			titleStart = 1 + (maxTitle - titleLen) / 2;
+		}
+
+		for (int i=1; i < width-1; i++) {
+			if (display != null && i >= titleStart && i < titleStart + titleLen) {
+				top.append(display.charAt(i-titleStart));
+			}
+			else {
+				top.append(hz);
+			}
+		}
+		top.append(tr);
+
+		app.drawDos(g,top.toString(),px,py,borderColor);
+
+		// Bottom border.
 		StringBuilder horiz = new StringBuilder();
 		for (int i = 0; i < width - 2; i++) horiz.append(hz);
 		String hLine = horiz.toString();
-		String topLine = tl + hLine + tr;
 		String bottomLine = bl + hLine + br;
 
-		app.drawDos(g, topLine, px, py, borderColor);
 		app.drawDos(g, bottomLine, px, py + ph - TerminalApplication.CELL_H, borderColor);
 
 		// Vertical sides.
@@ -144,17 +171,6 @@ public class TuiBox implements TuiWidget {
 			app.drawDos(g, String.valueOf(vt), px, y, borderColor);
 			app.drawDos(g, String.valueOf(vt),
 					px + pw - TerminalApplication.CELL_W, y, borderColor);
-		}
-
-		// Title, replacing the top border in place.
-		if (title != null && !title.isEmpty()) {
-			int titleLen = title.length() + 2; // " title "
-			if (titleLen > width - 2) titleLen = width - 2;
-			String display = " " + title.substring(0, titleLen - 2) + " ";
-			int startCol = col + (width - titleLen) / 2;
-			app.drawDos(g, display,
-					startCol * TerminalApplication.CELL_W,
-					py, borderColor);
-		}
+		}	
 	}
 }

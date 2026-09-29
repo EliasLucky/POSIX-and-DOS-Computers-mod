@@ -2,11 +2,12 @@ package com.eliaslucky.mc_dos.client.apps.msd;
 
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
-import com.eliaslucky.mc_dos.client.apps.display.DosPalette;
 import com.eliaslucky.mc_dos.client.tui.TuiBox;
 import com.eliaslucky.mc_dos.client.tui.TuiDialog;
 import com.eliaslucky.mc_dos.client.tui.TuiMenu;
 import com.eliaslucky.mc_dos.client.tui.TuiScreen;
+import com.eliaslucky.mc_dos.client.tui.TuiTheme;
+import com.eliaslucky.mc_dos.client.tui.TuiPalette;
 
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
@@ -109,16 +110,15 @@ public class MsdApplication extends TerminalApplication {
 
 	@Override
 	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-		// Cyan background, black text — the real MSD default.
-		g.fill(0, 0, appWidth, appHeight, theme.screenBg());
+		TuiTheme t = theme();
+		g.fill(0, 0, appWidth, appHeight, t.screenBg());
 
-		// Menu bar (row 0) — draws its own strip.
 		menuBar.render(g, this);
 
 		// Title bar (row 1).
 		String title = "Microsoft Diagnostics  Version 2.00";
-		g.fill(0, CELL_H, appWidth, CELL_H * 2, DosPalette.BLACK);
-		drawDos(g, center(title, cols()), 0, CELL_H, DosPalette.LIGHT_GRAY);
+		g.fill(0, CELL_H, appWidth, CELL_H * 2, t.titleBg());
+		drawDos(g, center(title, cols()), 0, CELL_H, t.titleFg());
 
 		// Category buttons.
 		renderButtonGrid(g);
@@ -131,6 +131,7 @@ public class MsdApplication extends TerminalApplication {
 		// Footer.
 		renderFooter(g);
 		overlay.render(g, this);
+		menuBar.renderOverlay(g,this);
 	}
 
 	/**
@@ -162,24 +163,33 @@ public class MsdApplication extends TerminalApplication {
 	 * @param selected whether the button is currently highlighted
 	 * @param open	   whether the button's detail window is open
 	 */
-	private void renderButton(GuiGraphics g, String label,
-							  int row, int col,
-							  boolean selected, boolean open) {
+	private void renderButton(GuiGraphics g, String label, int row, int col, boolean selected, boolean open) {
+		TuiTheme t = theme();
 		int px = col * CELL_W;
 		int py = row * CELL_H;
 		int pw = BUTTON_WIDTH * CELL_W;
 		int ph = BUTTON_HEIGHT * CELL_H;
 
-		int bg = selected ? DosPalette.BLACK
-				: (open ? DosPalette.LIGHT_GRAY : DosPalette.CYAN);
-		int fg = selected ? DosPalette.WHITE : DosPalette.BLACK;
+		int bg,fg;
+		if (selected) {
+			bg = t.highlightBg();
+			fg = t.highlightFg();
+		}
+		else if (open) {
+			bg = t.frameBg();
+			fg = t.titleFg();
+		}
+		else {
+			bg = t.screenBg();
+			fg = t.screenBg();
+		}
 
 		g.fill(px, py, px + pw, py + ph, bg);
 
 		// Single-line box border.
 		StringBuilder horiz = new StringBuilder();
 		for (int i = 0; i < BUTTON_WIDTH - 2; i++) horiz.append('\u2500');
-		String top	  = "\u250C" + horiz + "\u2510";
+		String top    = "\u250C" + horiz + "\u2510";
 		String bottom = "\u2514" + horiz + "\u2518";
 
 		drawDos(g, top, px, py, fg);
@@ -201,10 +211,11 @@ public class MsdApplication extends TerminalApplication {
 	/**
 	 * Draw the detail window for an opened section.
 	 *
-	 * @param g		  the graphics context
+	 * @param g the graphics context
 	 * @param section the section name to display
 	 */
 	private void renderDetailWindow(GuiGraphics g, String section) {
+		TuiTheme t = theme();
 		List<String> lines = sections.getOrDefault(section, List.of());
 
 		int w = 60;
@@ -215,21 +226,16 @@ public class MsdApplication extends TerminalApplication {
 		// Shadow.
 		g.fill((x + 1) * CELL_W, (y + 1) * CELL_H,
 			   (x + w + 1) * CELL_W, (y + h + 1) * CELL_H,
-			   DosPalette.BLACK);
-
-		// Body.
-		g.fill(x * CELL_W, y * CELL_H,
-			   (x + w) * CELL_W, (y + h) * CELL_H,
-			   DosPalette.LIGHT_GRAY);
+			   TuiPalette.BLACK);
 
 		// Double-line border.
-		TuiBox box = new TuiBox(y, x, w, h, TuiBox.Style.DOUBLE);
+		TuiBox box = new TuiBox(y, x, w, h, TuiBox.Style.DOUBLE).themed(t);
 		box.render(g, this);
 
 		// Title in the top border.
 		String title = " " + section + " ";
 		int tx = (x + (w - title.length()) / 2) * CELL_W;
-		drawDos(g, title, tx, y * CELL_H, DosPalette.BLACK);
+		drawDos(g, title, tx, y * CELL_H, t.titleFg());
 
 		// Content lines, clipped to the window.
 		int cy = y + 2;
@@ -237,7 +243,7 @@ public class MsdApplication extends TerminalApplication {
 		for (int i = 0; i < lines.size() && i < maxLines; i++, cy++) {
 			String line = lines.get(i);
 			if (line.length() > w - 4) line = line.substring(0, w - 4);
-			drawDos(g, line, (x + 2) * CELL_W, cy * CELL_H, DosPalette.BLACK);
+			drawDos(g, line, (x + 2) * CELL_W, cy * CELL_H, t.titleFg());
 		}
 
 		// OK button.
@@ -245,8 +251,8 @@ public class MsdApplication extends TerminalApplication {
 		int okCol = x + (w - 8) / 2;
 		g.fill(okCol * CELL_W, okRow * CELL_H,
 			   (okCol + 8) * CELL_W, (okRow + 1) * CELL_H,
-			   DosPalette.BLACK);
-		drawDos(g, "  OK  ", (okCol + 1) * CELL_W, okRow * CELL_H, DosPalette.WHITE);
+			   t.highlightBg());
+		drawDos(g, "  OK  ", (okCol + 1) * CELL_W, okRow * CELL_H, t.highlightFg());
 	}
 
 	/**
@@ -255,13 +261,14 @@ public class MsdApplication extends TerminalApplication {
 	 * @param g the graphics context
 	 */
 	private void renderFooter(GuiGraphics g) {
+		TuiTheme t = theme();
 		int y = (rows() - 1) * CELL_H;
-		g.fill(0, y, appWidth, y + CELL_H, DosPalette.LIGHT_GRAY);
+		g.fill(0, y, appWidth, y + CELL_H, t.statusBg());
 
 		String hints = openSection != null
 				? " Enter=Close  Esc=Cancel "
 				: " F1=Help  Alt=Menu  \u2191\u2193\u2190\u2192=Select	Enter=View	Esc=Exit ";
-		drawDos(g, hints, 0, y, DosPalette.BLACK);
+		drawDos(g, hints, 0, y, t.statusFg());
 	}
 
 	// Input
@@ -270,22 +277,25 @@ public class MsdApplication extends TerminalApplication {
 	public boolean keyPressed(int key, int scan, int mods) {
 		if (overlay.keyPressed(key, scan, mods)) return true;
 		// Menu takes precedence when open.
+		boolean isAlt = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
+		if (isAlt) {
+			if (!altHeld) {
+				altHeld = true;
+				if (menuBar.isOpen()) menuBar.close();
+				else menuBar.open();
+			}
+			return true;
+		}
 		if (menuBar.isOpen()) {
 			menuBar.keyPressed(key, scan, mods);
 			return true;
 		}
-	boolean isAlt = (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT);
-	if (isAlt && !altHeld) {
-		altHeld = true;
-		menuBar.open();
-		return true;
-	}
 
 		// Detail window: Enter / Esc close it.
 		if (openSection != null) {
 			if (key == GLFW.GLFW_KEY_ESCAPE
-					|| key == GLFW.GLFW_KEY_ENTER
-					|| key == GLFW.GLFW_KEY_KP_ENTER) {
+				|| key == GLFW.GLFW_KEY_ENTER
+				|| key == GLFW.GLFW_KEY_KP_ENTER) {
 				openSection = null;
 			}
 			return true;
@@ -317,7 +327,7 @@ public class MsdApplication extends TerminalApplication {
 				screen.returnToShell();
 				return true;
 			default:
-				return true;
+				return false;
 		}
 
 		int newIndex = row * GRID_COLS + col;
@@ -327,12 +337,12 @@ public class MsdApplication extends TerminalApplication {
 		return true;
 	}
 
-	@override
+	@Override
 	public boolean keyReleased(int key, int scan, int mods) {
 		if (key == GLFW.GLFW_KEY_LEFT_ALT || key == GLFW.GLFW_KEY_RIGHT_ALT) {
 			altHeld = false;
 		}
-		super.keyReleased(key,scan,mods);
+		return super.keyReleased(key,scan,mods);
 	}
 
 	@Override
@@ -388,18 +398,18 @@ public class MsdApplication extends TerminalApplication {
 		// TuiDialog but the caller manages stacking.
 		TuiDialog dlg = new TuiDialog();
 		dlg.addLine("");
+		dlg.addLine(title);
+		dlg.addLine("");
 		for (String line : lines) dlg.addLine(line);
 		dlg.addLine("");
 		dlg.addItem("OK", "close");
+ 
+		dlg.onAction(a -> { overlay.remove(dlg); overlay.setFocus(null); });
+		dlg.onCancel(() -> { overlay.remove(dlg); overlay.setFocus(null); });
 
 		overlay.add(dlg);
 		overlay.setFocus(dlg);
-		dlg.onAction(a -> { overlay.remove(dlg); overlay.setFocus(null); });
-		dlg.onCancel(() -> { overlay.remove(dlg); overlay.setFocus(null); });
 	}
-
-	/** Dialog currently being shown, or {@code null}. */
-	private TuiDialog pendingDialog = null;
 
 	// Helpers
 

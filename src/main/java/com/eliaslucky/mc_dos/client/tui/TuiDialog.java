@@ -57,11 +57,12 @@ public class TuiDialog implements TuiWidget {
 	private Consumer<String> onAction;
 	private Runnable onCancel;
 
-	private int overrideFrameBg = -1;
-	private int overrideBorder = -1;
-	private int overrideText = -1;
-	private int overrideHotBg = -1;
-	private int overrideHotFg = -1;
+	private boolean hasFrameBg = false;
+	private boolean hasBorder = false;
+	private boolean hasText = false;
+	private boolean hasHotBg = false;
+	private boolean hasHotFg = false;
+	private int overrideFrameBg,overrideBorder,overrideText,overrideHotBg,overrideHotFg;
 
 	/** Add a static line of text. */
 	public TuiDialog addLine(String line) { lines.add(line == null ? "" : line); return this; }
@@ -95,13 +96,15 @@ public class TuiDialog implements TuiWidget {
 	// through the render call so the dialog can size itself.
 	private int computedRow, computedCol, computedWidth, computedHeight;
 
-	public TuiDialog fill(int c)   { this.overrideFrameBg = c; return this; }
-	public TuiDialog border(int c) { this.overrideBorder  = c; return this; }
-	public TuiDialog text(int c)   { this.overrideText	  = c; return this; }
+	public TuiDialog fill(int c)   { this.overrideFrameBg = c; hasFrameBg = true; return this; }
+	public TuiDialog border(int c) { this.overrideBorder  = c; hasBorder = true; return this; }
+	public TuiDialog text(int c)   { this.overrideText = c; hasText = true; return this; }
 	public TuiDialog highlight(int bg, int fg) {
 		this.overrideHotBg = bg;
-	this.overrideHotFg = fg;
-	return this;
+		this.overrideHotFg = fg;
+		hasHotBg = true;
+		hasHotFg = true;
+		return this;
 	}
 
 	@Override public int row()	  { return computedRow; }
@@ -114,11 +117,11 @@ public class TuiDialog implements TuiWidget {
 		// Compute size and position based on text lengths and screen.
 		TuiTheme t = app.theme();
 
-		int frameBg = (overrideFrameBg >= 0) ? overrideFrameBg : t.frameBg();
-		int border	= (overrideBorder  >= 0) ? overrideBorder  : t.border();
-		int textFg	= (overrideText    >= 0) ? overrideText    : t.titleFg();
-		int hotBg	= (overrideHotBg   >= 0) ? overrideHotBg   : t.highlightBg();
-		int hotFg	= (overrideHotFg   >= 0) ? overrideHotFg   : t.highlightFg();
+		int frameBg = hasFrameBg ? overrideFrameBg : t.frameBg();
+		int border  = hasBorder ? overrideBorder  : t.border();
+		int textFg  = hasText ? overrideText    : t.titleFg();
+		int hotBg   = hasHotBg ? overrideHotBg   : t.highlightBg();
+		int hotFg   = hasHotFg ? overrideHotFg   : t.highlightFg();
 
 		int innerW = 0;
 		for (String s : lines) innerW = Math.max(innerW, s.length());
@@ -164,7 +167,7 @@ public class TuiDialog implements TuiWidget {
 				TuiPalette.BLACK);
 
 		// Body fill
-		g.fill(px,py,px+pw,py+ph,frameBg);
+		//g.fill(px,py,px+pw,py+ph,frameBg);
 
 		// Body use a TuiBox for the border.
 		TuiBox box = new TuiBox(y, x, w, h, TuiBox.Style.SINGLE)
