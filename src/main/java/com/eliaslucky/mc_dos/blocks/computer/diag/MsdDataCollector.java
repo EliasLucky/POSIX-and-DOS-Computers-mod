@@ -142,26 +142,26 @@ public final class MsdDataCollector {
 
 		// LPT PORTS
 		section(out, "LPT PORTS");
-		for (String l : IrqCatalog.lptContent(kernel)) out.append("  ").append(l).append('\n');
+		for (String l : IrqCatalog.lptContent(kernel)) out.append("  ").append(l).append("\n");
 
 		// COM PORTS
 		section(out, "COM PORTS");
-		for (String l : IrqCatalog.comContent(kernel)) out.append("  ").append(l).append('\n');
+		for (String l : IrqCatalog.comContent(kernel)) out.append("  ").append(l).append("\n");
 
 		// IRQ STATUS
 		section(out, "IRQ STATUS");
 		for (String l : IrqCatalog.irqContent(config, kernel, bus)) {
-			out.append("  ").append(l).append('\n');
+			out.append("  ").append(l).append("\n");
 		}
 
 		// TSR PROGRAMS
 		section(out, "TSR PROGRAMS");
 		// The mod has no TSR concept; a real machine reported every
 		// program that hooked an interrupt. We show only the built-ins.
-		out.append("  Program			 Address   Size\n");
+		out.append("  Program            Address   Size\n");
 		out.append("  -----------------  --------  ----\n");
-		line(out, "COMMAND.COM", "--		0 K");
-		line(out, "HIMEM.SYS", "--		  0 K");
+		line(out, "COMMAND.COM", "       --        0 K");
+		line(out, "HIMEM.SYS", "         --        0 K");
 
 		// DEVICE DRIVERS
 		section(out, "DEVICE DRIVERS");
@@ -176,7 +176,7 @@ public final class MsdDataCollector {
 				out.append("  ----------  ------------------------------------\n");
 				for (String name : names) {
 					String desc = kernel.getDevices().lookup(name).description();
-					out.append(String.format("	%-10s  %s%n", name, desc));
+					out.append(String.format("	%-10s  %s\n", name, desc));
 				}
 			}
 		}
@@ -191,7 +191,7 @@ public final class MsdDataCollector {
 			for (PeripheralAddress a : devices) {
 				String devName = a.deviceClass().toUpperCase(Locale.ROOT);
 				boolean loaded = kernel != null && kernel.getDevices().isDevice(devName);
-				out.append(String.format("	%-4d  %-12s  %-10s	%-14s  %s%n",
+				out.append(String.format("	%-4d  %-12s  %-10s	%-14s  %s\n",
 						a.slot(),
 						a.deviceClass(),
 						a.vendorId(),
@@ -209,7 +209,7 @@ public final class MsdDataCollector {
 			boolean loaded = kernel != null && kernel.getDevices().isDevice(devName);
 			if (loaded) continue;
 			if (!anyUnclaimed) {
-				out.append('\n');
+				out.append("\n");
 				out.append("=== CONFIG.SYS SUGGESTIONS ===\n");
 				out.append("To load a driver for unclaimed hardware, add\n");
 				out.append("the following line(s) to C:\\CONFIG.SYS:\n\n");
@@ -219,7 +219,7 @@ public final class MsdDataCollector {
 			   .append(devName)
 			   .append(".SYS /SLOT=")
 			   .append(a.slot())
-			   .append('\n');
+			   .append("\n");
 		}
 
 		return out.toString();
@@ -235,7 +235,7 @@ public final class MsdDataCollector {
 	 * @param name	 the section name, uppercase by convention
 	 */
 	private static void section(StringBuilder out, String name) {
-		out.append("=== ").append(name).append(" ===\n");
+		out.append("\n=== ").append(name).append(" ===\n");
 	}
 
 	/**
@@ -247,6 +247,6 @@ public final class MsdDataCollector {
 	 * @param value the value text
 	 */
 	private static void line(StringBuilder out, String label, String value) {
-		out.append(String.format("  %-22s%s%n", label + ":", value));
+		out.append(String.format("  %-22s%s\n", label + ":", value));
 	}
 }

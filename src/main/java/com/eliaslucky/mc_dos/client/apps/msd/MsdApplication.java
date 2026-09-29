@@ -68,7 +68,7 @@ public class MsdApplication extends TerminalApplication {
 						new TuiMenu.Item("Print Report...", 'P', "file.print",
 								"Print the diagnostic report"),
 						new TuiMenu.Item("Exit", 'X', "file.exit",
-								"Exit Microsoft Diagnostics")
+								"Exit Diagnostics")
 				)),
 				new TuiMenu.Menu("Utilities", 'U', List.of(
 						new TuiMenu.Item("Memory Block Display", 'M', "util.memory",
@@ -80,7 +80,7 @@ public class MsdApplication extends TerminalApplication {
 						new TuiMenu.Item("Index", 'I', "help.index",
 								"Display the Help index"),
 						new TuiMenu.Item("About", 'A', "help.about",
-								"About Microsoft Diagnostics")
+								"About Diagnostics")
 				))
 		));
 		this.menuBar.onAction(this::handleMenuAction);
@@ -97,6 +97,7 @@ public class MsdApplication extends TerminalApplication {
 
 		String current = null;
 		for (String line : raw.split("\n", -1)) {
+			System.out.println(line);
 			if (line.startsWith("=== ") && line.endsWith(" ===")) {
 				current = line.substring(4, line.length() - 4);
 				sectionOrder.add(current);
@@ -230,13 +231,8 @@ public class MsdApplication extends TerminalApplication {
 			   TuiPalette.BLACK);
 
 		// Double-line border.
-		TuiBox box = new TuiBox(y, x, w, h, TuiBox.Style.DOUBLE).themed(t);
+		TuiBox box = new TuiBox(y, x, w, h, TuiBox.Style.DOUBLE).themed(t).titled(section);
 		box.render(g, this);
-
-		// Title in the top border.
-		String title = " " + section + " ";
-		int tx = (x + (w - title.length()) / 2) * CELL_W;
-		drawDos(g, title, tx, y * CELL_H, t.titleFg());
 
 		// Content lines, clipped to the window.
 		int cy = y + 2;

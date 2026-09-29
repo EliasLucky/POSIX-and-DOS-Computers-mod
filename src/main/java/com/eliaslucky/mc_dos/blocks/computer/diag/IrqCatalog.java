@@ -139,11 +139,11 @@ public final class IrqCatalog {
 			out.add("LPT1:	 I/O Port 0378h");
 			out.add("        Status: Ready");
 		} else {
-			out.add("LPT1:	 Not installed");
+			out.add("LPT1:   Not installed");
 		}
 		out.add("");
-		out.add("LPT2:	 Not installed");
-		out.add("LPT3:	 Not installed");
+		out.add("LPT2:   Not installed");
+		out.add("LPT3:   Not installed");
 		return out;
 	}
 
