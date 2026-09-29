@@ -1,10 +1,9 @@
 {
 	"format_version": "1.9.0",
-	"credit": "Made with Blockbench",
 	"textures": {
-		"0": "mc_dos:block/computer/lpc_mccmd",
-		"1": "command_block_back",
-		"particle": "mc_dos:block/computer/lpc_mccmd"
+		"0": "mc_dos:block/hardware/lpc_mccmd",
+		"1": "minecraft:command_block_back",
+		"particle": "mc_dos:block/hardware/lpc_mccmd"
 	},
 	"elements": [
 		{

@@ -14,7 +14,13 @@ public class AllCreativeModeTabs {
 
 	public static final RegistryObject<CreativeModeTab> BASE_CREATIVE_TAB = REGISTER.register("base", () -> CreativeModeTab.builder()
 		.title(Component.translatable("itemGroup.mc_dos.base"))
-		.icon(() -> new ItemStack(AllBlocks.CHAIR.get()))
+		.icon(() -> new ItemStack(AllBlocks.WHITE_IBM_PC_AT_COMPUTER.get()))
+		.build()
+	);
+
+	public static final RegistryObject<CreativeModeTab> HARDWARE_CREATIVE_TAB = REGISTER.register("peripherals", () -> CreativeModeTab.builder()
+		.title(Component.translatable("itemGroup.mc_dos.peripherals"))
+		.icon(() -> new ItemStack(AllBlocks.HARDWARE_LPC_MCCMD_BLOCK.get()))
 		.build()
 	);
 

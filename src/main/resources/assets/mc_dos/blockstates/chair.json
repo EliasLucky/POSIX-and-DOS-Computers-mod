@@ -1,8 +1,0 @@
-{
-	"variants": {
-		"facing=north": { "model": "mc_dos:block/chair" },
-		"facing=south": { "model": "mc_dos:block/chair", "y": 180 },
-		"facing=west": { "model": "mc_dos:block/chair", "y": 270 },
-		"facing=east": { "model": "mc_dos:block/chair", "y": 90 }
-	}
-}

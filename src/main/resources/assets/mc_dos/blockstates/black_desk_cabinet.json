@@ -1,0 +1,23 @@
+{
+	"variants": {
+		"facing=north,part=single": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_single", "y": 180 },
+		"facing=south,part=single": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_single" },
+		"facing=east,part=single": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_single", "y": 90 },
+		"facing=west,part=single": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_single", "y": 270 },
+
+		"facing=north,part=left": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_left", "y": 180 },
+		"facing=south,part=left": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_left" },
+		"facing=east,part=left": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_left", "y": -90 },
+		"facing=west,part=left": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_left", "y": 90 },
+
+		"facing=north,part=middle": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_middle", "y": 180 },
+		"facing=south,part=middle": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_middle" },
+		"facing=east,part=middle": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_middle", "y": -90 },
+		"facing=west,part=middle": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_middle", "y": 90 },
+
+		"facing=north,part=right": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_right", "y": 180 },
+		"facing=south,part=right": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_right" },
+		"facing=east,part=right": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_right", "y": 270 },
+		"facing=west,part=right": { "model": "mc_dos:block/desk_cabinet/black_desk_cabinet_right", "y": 90 }
+	}
+}

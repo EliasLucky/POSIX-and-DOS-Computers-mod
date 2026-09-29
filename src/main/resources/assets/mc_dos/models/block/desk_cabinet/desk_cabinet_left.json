@@ -1,6 +1,5 @@
 {
 	"format_version": "1.9.0",
-	"credit": "Made with Blockbench",
 	"textures": {
 		"0": "mc_dos:block/spruce_plank_top",
 		"particle": "mc_dos:block/spruce_plank_top"

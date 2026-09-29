@@ -1,0 +1,7 @@
+{
+	"parent": "mc_dos:block/desk_cabinet/desk_cabinet_middle",
+	"textures": {
+		"1": "mc_dos:block/cabinet/black_cabinet",
+		"particle": "mc_dos:block/cabinet/black_cabinet"
+	}
+}

@@ -1,0 +1,8 @@
+{
+	"variants": {
+		"facing=north": { "model": "mc_dos:block/hardware/hardware_lpc_mccmd" },
+		"facing=south": { "model": "mc_dos:block/hardware/hardware_lpc_mccmd", "y": 180 },
+		"facing=west": { "model": "mc_dos:block/hardware/hardware_lpc_mccmd", "y": 270 },
+		"facing=east": { "model": "mc_dos:block/hardware/hardware_lpc_mccmd", "y": 90 }
+	}
+}
