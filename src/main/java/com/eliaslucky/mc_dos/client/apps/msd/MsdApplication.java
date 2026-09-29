@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Microsoft Diagnostics 2.00, running as a client-side TUI application.
+ * Diagnostics 2.00, running as a client-side TUI application.
  *
  * <p>The application is pure presentation. It receives a sectioned
  * report from the server (via the {@code APP_LAUNCH:MSD::} payload)
@@ -117,7 +117,7 @@ public class MsdApplication extends TerminalApplication {
 		menuBar.render(g, this);
 
 		// Title bar (row 1).
-		String title = "Microsoft Diagnostics  Version 2.00";
+		String title = "Diagnostics  Version 2.00";
 		g.fill(0, CELL_H, appWidth, CELL_H * 2, t.titleBg());
 		drawDos(g, center(title, cols()), 0, CELL_H, t.titleFg());
 
@@ -181,8 +181,8 @@ public class MsdApplication extends TerminalApplication {
 			fg = t.titleFg();
 		}
 		else {
-			bg = t.screenBg();
-			fg = t.screenBg();
+			bg = t.frameBg();
+			fg = t.titleFg();
 		}
 
 		g.fill(px, py, px + pw, py + ph, bg);
@@ -268,7 +268,7 @@ public class MsdApplication extends TerminalApplication {
 
 		String hints = openSection != null
 				? " Enter=Close  Esc=Cancel "
-				: " F1=Help  Alt=Menu  \u2191\u2193\u2190\u2192=Select	Enter=View	Esc=Exit ";
+				: " F1=Help  Alt=Menu  \u2191\u2193\u2190\u2192=Select  Enter=View  Esc=Exit ";
 		drawDos(g, hints, 0, y, t.statusFg());
 	}
 
@@ -386,12 +386,13 @@ public class MsdApplication extends TerminalApplication {
 	 */
 	private void showAboutDialog() {
 		showDialog("About",
-				"Microsoft Diagnostics",
+				"Diagnostics",
 				"Version 2.00",
 				"",
-				"Copyright (C) Microsoft Corp 1981-1993",
+				"Copyright (C) 2026 Elias Lucky",
+				"GNU General Public License version 3",
 				"",
-				"Emulated diagnostic tool.");
+				"Simulated diagnostic tool.");
 	}
 
 	private void showDialog(String title, String... lines) {
@@ -428,6 +429,6 @@ public class MsdApplication extends TerminalApplication {
 
 	@Override
 	public String getTitle() {
-		return "MSD - Microsoft Diagnostics";
+		return "MSD - Diagnostics";
 	}
 }
