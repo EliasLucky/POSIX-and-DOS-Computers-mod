@@ -118,6 +118,7 @@ public abstract class TerminalApplication {
 	public boolean keyReleased(int keyCode, int scanCode, int modifiers) { return false; }
 	public boolean mouseClicked(double x, double y, int btn)	{ return false; }
 	public boolean mouseScrolled(double x, double y, double d)	{ return false; }
+	public boolean mouseReleased(double x, double y, int btn) { return false; }
 
 	public void onClose() {}
 	public abstract String getTitle();

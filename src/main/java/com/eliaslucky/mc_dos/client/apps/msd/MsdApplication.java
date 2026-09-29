@@ -8,6 +8,7 @@ import com.eliaslucky.mc_dos.client.tui.TuiMenu;
 import com.eliaslucky.mc_dos.client.tui.TuiScreen;
 import com.eliaslucky.mc_dos.client.tui.TuiTheme;
 import com.eliaslucky.mc_dos.client.tui.TuiPalette;
+import com.eliaslucky.mc_dos.client.tui.TuiThemes;
 
 import net.minecraft.client.gui.GuiGraphics;
 import org.lwjgl.glfw.GLFW;
@@ -59,7 +60,7 @@ public class MsdApplication extends TerminalApplication {
 	 */
 	public MsdApplication(ComputerTerminalScreen screen, String content) {
 		super(screen);
-
+		setTheme(TuiThemes.MSD);
 		parseReport(content);
 
 		this.menuBar = new TuiMenu(0, List.of(

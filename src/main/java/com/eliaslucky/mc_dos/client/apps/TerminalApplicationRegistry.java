@@ -6,17 +6,17 @@ import com.eliaslucky.mc_dos.client.apps.qbasic.QBasicApplication;
 import java.util.*;
 
 public final class TerminalApplicationRegistry {
-    public interface AppFactory {
-        TerminalApplication create(ComputerTerminalScreen screen, String[] args, String initialContent);
-    }
+	public interface AppFactory {
+		TerminalApplication create(ComputerTerminalScreen screen, String[] args, String initialContent);
+	}
 
-    private static final Map<String, AppFactory> REGISTRY = new HashMap<>();
+	private static final Map<String, AppFactory> REGISTRY = new HashMap<>();
 
-    public static void register(String name, AppFactory f) {
-        REGISTRY.put(name.toUpperCase(Locale.ROOT), f);
-    }
+	public static void register(String name, AppFactory f) {
+		REGISTRY.put(name.toUpperCase(Locale.ROOT), f);
+	}
 
-    public static AppFactory get(String name) {
-        return REGISTRY.get(name.toUpperCase(Locale.ROOT));
-    }
+	public static AppFactory get(String name) {
+		return REGISTRY.get(name.toUpperCase(Locale.ROOT));
+	}
 }

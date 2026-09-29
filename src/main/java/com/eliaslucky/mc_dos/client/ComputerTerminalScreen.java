@@ -173,6 +173,23 @@ public class ComputerTerminalScreen extends Screen {
 	}
 
 	@Override
+	public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+		if (activeApp != null) {
+			if (activeApp.keyReleased(keyCode,scanCode,modifiers)) return true;
+		}
+		return super.keyReleased(keyCode,scanCode,modifiers);
+	}
+
+	// TODO: FOR THE FUTURE when i am gonna add GUI that relies on mouse
+	@Override
+	public boolean mouseReleased(double mx, double my, int button) {
+		if (activeApp != null) {
+			if (activeApp.mouseReleased(mx,my,button)) return true;
+		}
+		return super.mouseReleased(mx,my,button);
+	}
+
+	@Override
 	public boolean mouseClicked(double mx, double my, int btn) {
 		if (activeApp != null) return activeApp.mouseClicked(mx, my, btn);
 		return super.mouseClicked(mx, my, btn);

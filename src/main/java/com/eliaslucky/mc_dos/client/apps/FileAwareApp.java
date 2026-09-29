@@ -17,14 +17,14 @@ package com.eliaslucky.mc_dos.client.apps;
  * @since 1.5
  */
 public interface FileAwareApp {
-    /**
-     * Called when a file-write request completes.
-     *
-     * @param path    the path that was written
-     * @param success {@code true} if the write succeeded
-     * @param message an error message from the OS's {@link
-     *                com.eliaslucky.mc_dos.blocks.computer.fs.FileError}
-     *                taxonomy; empty string on success
-     */
-    void onFileWriteResult(String path, boolean success, String message);
+	/**
+	 * Called when a file-write request completes.
+	 *
+	 * @param path	  the path that was written
+	 * @param success {@code true} if the write succeeded
+	 * @param message an error message from the OS's {@link
+	 *		  com.eliaslucky.mc_dos.blocks.computer.fs.FileError}
+	 *		  taxonomy; empty string on success
+	 */
+	void onFileWriteResult(String path, boolean success, String message);
 }

@@ -111,11 +111,7 @@ public class TuiBox implements TuiWidget {
 
 		// Interior fill (below the border glyphs).
 		if (filled) {
-			g.fill(px + TerminalApplication.CELL_W,
-				py + TerminalApplication.CELL_H,
-				px + pw - TerminalApplication.CELL_W,
-				py + ph - TerminalApplication.CELL_H,
-				bgColor);
+			g.fill(px,py,px + pw,py + ph,bgColor);
 		}
 
 		// Pick the box-drawing glyph set.
