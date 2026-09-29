@@ -94,7 +94,7 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 		}
 		
 		// Double-bordered central box
-		renderBox(g, w);
+		renderBox(g, W);
 
 		// Dialogs on top
 		widgets.render(g, this);
@@ -106,17 +106,19 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 
 		int boxW = Math.min(68,W-8);
 		int boxH = 13;
+		int boxCol = (W-boxW)/2;
+		int boxRow = 3;
 
 		g.fill((boxCol+1)*CELL_W, (boxRow+1) * CELL_H,
-		       (bolxCol+boxW-1)*CELL_W, (boxRow + boxH - 1) * CELL_H,
+		       (boxCol+boxW-1)*CELL_W, (boxRow + boxH - 1) * CELL_H,
 		       bg);
-		int interW = boxW -2;
+		int innerW = boxW -2;
 
 		String title = " Current SETUP Configuration ";
 		int titleStart = Math.max(0,(innerW-title.length())/2);
 		StringBuilder top = new StringBuilder(boxW);
-		tab.append('\u2554');
-		for (int = 0; i < innerW; i++) {
+		top.append('\u2554');
+		for (int i = 0; i < innerW; i++) {
 			if (i >= titleStart && i < titleStart + title.length()) {
 				top.append(title.charAt(i-titleStart));
 			}
@@ -132,7 +134,7 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 		bot.append('\u255A');
 		for (int i = 0; i < innerW; i++) bot.append('\u2550');
 		bot.append('\u255D');
-		drawDos(g,bot.toString(),boxCol*CELL_W,(boxRow+boxH-1)*CELL-H,fg);
+		drawDos(g,bot.toString(),boxCol*CELL_W,(boxRow+boxH-1)*CELL_H,fg);
 
 		// Side borders
 		for (int r = 1; r < boxH - 1; r++) {
@@ -167,8 +169,9 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 			int y = r*CELL_H;
 			boolean hot = (i == sel);
 			if (hot) {
-				g.fill
-
+				g.fill((boxCol+1) * CELL_W,y,
+				       (boxCol+boxW-1) * CELL_W,y+CELL_H,
+				       fg);
 			}
 			int textFg = hot ? bg : fg;
 			
