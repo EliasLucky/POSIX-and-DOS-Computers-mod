@@ -9,13 +9,12 @@ import com.eliaslucky.mc_dos.client.apps.FileAwareApp;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplication;
 import com.eliaslucky.mc_dos.client.apps.TerminalApplicationRegistry;
 import com.eliaslucky.mc_dos.client.apps.bios.BiosSetupRegistry;
+import com.eliaslucky.mc_dos.network.ClientboundTerminalStatePacket;
 import com.eliaslucky.mc_dos.network.ModMessages;
 import com.eliaslucky.mc_dos.network.ServerboundCloseTerminalPacket;
 import com.eliaslucky.mc_dos.network.ServerboundCommandPacket;
 import com.eliaslucky.mc_dos.network.ServerboundFileWritePacket;
-import com.eliaslucky.mc_dos.network.ServerboundRequestBiosConfigPacket;
-import com.eliaslucky.mc_dos.network.ServerboundRequestTerminalStatePacket;
-import com.eliaslucky.mc_dos.network.ServerboundSkipPostPacket;
+import com.eliaslucky.mc_dos.network.ServerboundBootActionPacket;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -36,13 +35,16 @@ public class ComputerTerminalScreen extends Screen {
 	private final BlockPos pos;
 	private final MachineType MachineType;
 	private TerminalApplication activeApp;
+
 	private final List<String> history = new ArrayList<>();
 	private final StringBuilder inputBuffer = new StringBuilder();
 	private String activePath;
+
 	private boolean postPhase = true;
+	private boolean countdownActive = false;
 	private boolean skipRequested = false;
-	private long	postStartMillis = 0;
-	private int		postCountdownSeconds = 5;
+	private long countdownEndMillis = 0;
+	
 	private static final int MARGIN = 10;
 	private static final int LINE_HEIGHT = 16;
 
@@ -51,7 +53,7 @@ public class ComputerTerminalScreen extends Screen {
 		this.pos = pos;
 		this.MachineType = MachineType;
 		this.activePath = MachineType.defaultPath();
-		ModMessages.sendToServer(new ServerboundRequestTerminalStatePacket(pos));
+		ModMessages.sendToServer(new ServerboundBootActionPacket(pos, ServerboundBootActionPacket.Action.REQUEST_STATE));
 	}
 	
 	@Override
@@ -68,25 +70,30 @@ public class ComputerTerminalScreen extends Screen {
 		int textColor = MachineType.textColor();
 		int maxLineWidth = Math.max(50, this.width - (MARGIN * 2));
 
-		List<FormattedCharSequence> wrappedLines = new ArrayList<>();
+		int remaining = remainingSeconds();
+		if (postPhase && countdownActive && remaining == 0 && !skipRequested) {
+			skipRequested = true;
+			countdownActive = false;
+			ModMessages.sendToServer(new ServerboundBootActionPacket(this.pos, ServerboundBootActionPacket.Action.SKIP_POST));
+		}
+
 		int lastPromptIndex = -1;
-		for (int i = 0; i < history.size(); i++) {
-			String line = history.get(i);
-			if (!line.isEmpty() && line.contains("Press")) {
-				lastPromptIndex = i;
+		if (postPhase && countdownActive && remaining > 0) {
+			for (int i = history.size()-1; i >= 0; i--) {
+				String line = history.get(i);
+				if (!line.isEmpty() && line.toLowerCase().contains("press")) {
+					lastPromptIndex = i;
+					break;
+				}
 			}
 		}
+
+		List<FormattedCharSequence> wrappedLines = new ArrayList<>();
 		for (int i = 0; i < history.size(); i++) {
 			String line = history.get(i);
 
-			if (postPhase && !skipRequested) {
-				long elapsed = System.currentTimeMillis() - postStartMillis;
-				int remaining = postCountdownSeconds - (int)(elapsed/1000);
-				line = line + " ... " + remaining;
-				if (remaining <= 0) {
-					skipRequested = true;
-					ModMessages.sendToServer(new ServerboundSkipPostPacket(this.pos));
-				}
+			if (i == lastPromptIndex) {	
+				line = line + " ... " + remaining;	
 			}
 			if (line.isEmpty()) {
 				wrappedLines.add(FormattedCharSequence.EMPTY);
@@ -130,11 +137,12 @@ public class ComputerTerminalScreen extends Screen {
 		if (postPhase) {
 			if (skipRequested) return true;
 			skipRequested = true;
+			countdownActive = false;
 			if (keyCode == GLFW.GLFW_KEY_DELETE) {
-				ModMessages.sendToServer(new ServerboundRequestBiosConfigPacket(pos));
+				ModMessages.sendToServer(new ServerboundBootActionPacket(pos,ServerboundBootActionPacket.Action.ENTER_SETUP));
 			}
 			else {
-				ModMessages.sendToServer(new ServerboundSkipPostPacket(pos));
+				ModMessages.sendToServer(new ServerboundBootActionPacket(pos,ServerboundBootActionPacket.Action.SKIP_POST));
 			}
 			return true;
 		}
@@ -260,53 +268,63 @@ public class ComputerTerminalScreen extends Screen {
 	 * Called by {@link ClientboundTerminalStatePacket} when the server
 	 * tells the client what phase the machine is in.
 	 *
-	 * <p>When the machine is in POST, the client clears its history,
-	 * seeds it with the BIOS's POST lines, and starts the SETUP
-	 * countdown. When the machine is already running, the client just
-	 * clears the countdown flag and leaves the history alone — the
-	 * shell will populate it via normal command execution.
+	 * <p>The packet carries only the fields relevant to the current phase:
+	 * <ul>
+	 *   <li>{@code POST} - {@code postLines} and {@code countdownSeconds} are populated.</li>
+	 *   <li>{@code RUNNING} - all phase-specific fields are null.</li>
+	 *   <li>{@code SETUP} - {@code biosConfig}, @{code biosName}, and {@code setupScreenId} are populated.</li>
 	 *
-	 * @param postPhase		  whether the machine is showing POST
-	 * @param postLines		  BIOS output lines, empty when not in POST
-	 * @param countdownSeconds how long the DEL prompt stays visible
-	 * @param currentPath	  current path on the filesystem
+	 * @param phase            which moed the machine is in
+	 * @param currentPath      the working directory (always present)
+	 * @param postLines        BIOS POST lines (POST)
+	 * @param countdownSeconds DEL countdown duration (POST)
+	 * @param biosConfig	   machine configuration (SETUP)
+	 * @param biosName         BIOS display name (SETUP)
+	 * @param setupScreenId    setup screen registry (SETUP)
 	 */
-	public void onTerminalState(boolean postPhase, List<String> postLines, int countdownSeconds, String currentPath) {
-		boolean wasInPost = this.postPhase;
-		this.postPhase = postPhase;
+	public void onTerminalState(ClientboundTerminalStatePacket.Phase phase, String currentPath, List<String> postLines, int countdownSeconds, MachineConfig biosConfig, String biosName, String setupScreenId) {
 		if (currentPath != null && !currentPath.isEmpty()) {
 			this.activePath = currentPath;
 		}
-		if (postPhase) {
-			if (!wasInPost) {
-				this.postStartMillis = System.currentTimeMillis();
-				this.postCountdownSeconds = countdownSeconds;
+		switch (phase) {
+			case POST -> {
+				boolean wasInPost = this.postPhase;
+				this.postPhase = true;
+				if (!wasInPost || !countdownActive) {
+					this.countdownEndMillis = System.currentTimeMillis() + countdownSeconds * 1000L;
+					this.countdownActive = true;
+					this.skipRequested = false;
+				}
+				history.clear();
+				for (String line : postLines) history.add(line);
+				history.add("");
+			}
+			case RUNNING  -> {
+				this.postPhase = false;
+				this.countdownActive = false;
 				this.skipRequested = false;
 			}
-			history.clear();
-			for (String line : postLines) history.add(line);
-			history.add("");
-		}
-		else {
-			this.skipRequested = false;
+			case SETUP -> {
+				this.postPhase = false;
+				this.countdownActive = false;
+				this.skipRequested = false;
+				var factory = BiosSetupRegistry.get(setupScreenId);
+				if (factory != null) {
+					launchApp(factory.create(this,biosConfig,biosName));
+				}
+				else {
+					history.add("No setup screen registered for BIOS: " + setupScreenId);
+				}
+			}
 		}
 	}
 
-	/**
-	 * Called by {@link ClientboundBiosConfigPacket} when the server
-	 * responds to a SETUP request. Looks up the setup screen by ID in
-	 * {@link BiosSetupRegistry}. Addons that ship their own BIOS register
-	 * their setup screen under the same ID that their BIOS's
-	 * {@code setupScreenId()} returns.
-	 */
-	public void onBiosConfigReceived(MachineConfig config, String biosName, String setupScreenId) {
-		var factory = BiosSetupRegistry.get(setupScreenId);
-		if (factory == null) {
-			history.add("No setup screen registered for BIOS: " + setupScreenId);
-			return;
-		}
-		launchApp(factory.create(this, config, biosName));
-	}
+	private int remainingSeconds() {
+		if (!countdownActive) return -1;
+		long left = countdownEndMillis - System.currentTimeMillis();
+		if (left <= 0) return 0;
+		return (int)Math.ceil(left/1000.0);
+	}	
 	public Font getDosFont()	  { return this.font; }
 	public Style getDosStyle()	  { return DOS_STYLE; }
 	public BlockPos getPos()	  { return this.pos; }

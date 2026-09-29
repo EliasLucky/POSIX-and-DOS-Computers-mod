@@ -1,5 +1,6 @@
 package com.eliaslucky.mc_dos.network;
 
+import com.eliaslucky.mc_dos.api.bios.MachineConfig;
 import com.eliaslucky.mc_dos.client.ComputerTerminalScreen;
 
 import net.minecraft.client.Minecraft;
@@ -13,53 +14,97 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-/**
- * Sent from server to client when a terminal screen opens or the boot
- * state changes. Tells the client whether the machine is in POST, in
- * SETUP, or running, and carries the POST lines if applicable.
- */
 public class ClientboundTerminalStatePacket {
-	private final BlockPos pos;
-	private final boolean postPhase;
-	private final List<String> postLines;
-	private final int countdownSeconds;
-	private final String currentPath;
+    public enum Phase { POST, RUNNING, SETUP }
 
-	public ClientboundTerminalStatePacket(BlockPos pos, boolean postPhase, List<String> postLines, int countdownSeconds, String currentPath) {
-		this.pos = pos;
-		this.postPhase = postPhase;
-		this.postLines = postLines == null ? List.of() : List.copyOf(postLines);
-		this.countdownSeconds = countdownSeconds;
-		this.currentPath = currentPath == null ? "" : currentPath;
-	}
+    private final BlockPos pos;
+    private final Phase phase;
+    private final String currentPath;
 
-	public ClientboundTerminalStatePacket(FriendlyByteBuf buffer) {
-		this.pos = buffer.readBlockPos();
-		this.postPhase = buffer.readBoolean();
-		int n = buffer.readVarInt();
-		List<String> lines = new ArrayList<>(n);
-		for (int i = 0; i < n; i++) lines.add(buffer.readUtf());
-		this.postLines = lines;
-		this.countdownSeconds = buffer.readVarInt();
-		this.currentPath = buffer.readUtf();
-	}
+    // POST-only
+    private final List<String> postLines;
+    private final int countdownSeconds;
 
-	public void encode(FriendlyByteBuf buffer) {
-		buffer.writeBlockPos(pos);
-		buffer.writeBoolean(postPhase);
-		buffer.writeVarInt(postLines.size());
-		for (String line : postLines) buffer.writeUtf(line);
-		buffer.writeVarInt(countdownSeconds);
-		buffer.writeUtf(currentPath);
-	}
+    // SETUP-only
+    private final MachineConfig biosConfig;
+    private final String biosName;
+    private final String setupScreenId;
 
-	public void handle(Supplier<NetworkEvent.Context> contextSupplier) {
-		NetworkEvent.Context ctx = contextSupplier.get();
-		ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-			if (Minecraft.getInstance().screen instanceof ComputerTerminalScreen screen) {
-				screen.onTerminalState(postPhase, postLines, countdownSeconds, currentPath);
-			}
-		}));
-		ctx.setPacketHandled(true);
-	}
+    public ClientboundTerminalStatePacket(BlockPos pos, Phase phase, String currentPath,
+                                           List<String> postLines, int countdownSeconds,
+                                           MachineConfig biosConfig, String biosName,
+                                           String setupScreenId) {
+        this.pos = pos;
+        this.phase = phase;
+        this.currentPath = currentPath == null ? "" : currentPath;
+        this.postLines = postLines == null ? List.of() : List.copyOf(postLines);
+        this.countdownSeconds = countdownSeconds;
+        this.biosConfig = biosConfig;
+        this.biosName = biosName;
+        this.setupScreenId = setupScreenId;
+    }
+
+    public ClientboundTerminalStatePacket(FriendlyByteBuf b) {
+        this.pos = b.readBlockPos();
+        this.phase = Phase.values()[b.readByte()];
+        this.currentPath = b.readUtf();
+
+        List<String> lines = List.of();
+        int count = 0;
+        MachineConfig cfg = null;
+        String name = null;
+        String id = null;
+
+        switch (phase) {
+            case POST -> {
+                int n = b.readVarInt();
+                List<String> pl = new java.util.ArrayList<>(n);
+                for (int i = 0; i < n; i++) pl.add(b.readUtf());
+                lines = pl;
+                count = b.readVarInt();
+            }
+            case SETUP -> {
+                cfg  = ServerboundBootActionPacket.readConfig(b);
+                name = b.readUtf();
+                id   = b.readUtf();
+            }
+            case RUNNING -> { /* nothing extra */ }
+        }
+
+        this.postLines = lines;
+        this.countdownSeconds = count;
+        this.biosConfig = cfg;
+        this.biosName = name;
+        this.setupScreenId = id;
+    }
+
+    public void encode(FriendlyByteBuf b) {
+        b.writeBlockPos(pos);
+        b.writeByte(phase.ordinal());
+        b.writeUtf(currentPath);
+
+        switch (phase) {
+            case POST -> {
+                b.writeVarInt(postLines.size());
+                for (String line : postLines) b.writeUtf(line);
+                b.writeVarInt(countdownSeconds);
+            }
+            case SETUP -> {
+                ServerboundBootActionPacket.writeConfig(b, biosConfig);
+                b.writeUtf(biosName);
+                b.writeUtf(setupScreenId);
+            }
+            case RUNNING -> { /* nothing extra */ }
+        }
+    }
+
+    public void handle(Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+            if (Minecraft.getInstance().screen instanceof ComputerTerminalScreen screen) {
+                screen.onTerminalState(phase, currentPath, postLines, countdownSeconds,
+                        biosConfig, biosName, setupScreenId);
+            }
+        }));
+        ctx.get().setPacketHandled(true);
+    }
 }
