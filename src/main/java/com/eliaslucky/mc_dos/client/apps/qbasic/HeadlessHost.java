@@ -82,7 +82,7 @@ public class HeadlessHost implements Host {
         this.bg = b & 0xFF;
     }
     @Override public int colorFg() { return fg; }
-    @Override public void setViewport(int x1, int y1, int x2, int y2, int b) { /* no-op */ }
+    @Override public void setViewport(int x1, int y1, int x2, int y2, int b, boolean s) { /* no-op */ }
     @Override public void resetViewport()                                  { /* no-op */ }
     @Override public void beep()                           { /* no-op */ }
     @Override public void sleep(int ms)                    { /* no-op */ }

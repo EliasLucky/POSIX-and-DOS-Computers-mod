@@ -380,13 +380,13 @@ record SelectStmt(int line, Expression subject, List<CaseClause> clauses) implem
 }
 
 // VIEW
-record ViewStmt(int line, Expression x1, Expression y1, Expression x2, Expression y2, Expression fill, Expression border, boolean reset) implements Statement {
+record ViewStmt(int line, Expression x1, Expression y1, Expression x2, Expression y2, Expression fill, Expression border, boolean screen, boolean reset) implements Statement {
 	@Override public int line() { return line; }
 
 	@Override
 	public void execute(ExecutionContext ctx, Host host) {
 		if (reset) { host.resetViewport(); return; }
-		host.setViewport((int) x1.eval(ctx, host).asNumber(),(int) y1.eval(ctx, host).asNumber(),(int) x2.eval(ctx, host).asNumber(),(int) y2.eval(ctx, host).asNumber(),border == null ? -1 : (int) border.eval(ctx, host).asNumber());
+		host.setViewport((int) x1.eval(ctx, host).asNumber(),(int) y1.eval(ctx, host).asNumber(),(int) x2.eval(ctx, host).asNumber(),(int) y2.eval(ctx, host).asNumber(),border == null ? -1 : (int) border.eval(ctx, host).asNumber(),screen);
 	}
 }
 

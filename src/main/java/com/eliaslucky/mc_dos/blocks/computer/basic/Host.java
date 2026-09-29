@@ -22,7 +22,7 @@ public interface Host {
 	/** @return the next key, or "" if the queue is empty. */
 	String pollKey();
 	/** Set a clipping rectangle. Subsequent draws are confined to it. */
-	void setViewport(int x1, int y1, int x2, int y2, int borderColor);
+	void setViewport(int x1, int y1, int x2, int y2, int borderColor, boolean screen);
 	/** Remove the current viewport — draws go full-screen again. */
 	void resetViewport();
 }

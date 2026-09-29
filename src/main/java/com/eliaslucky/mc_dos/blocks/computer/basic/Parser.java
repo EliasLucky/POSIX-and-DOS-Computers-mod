@@ -667,10 +667,11 @@ public class Parser {
 		// VIEW [SCREEN] (x1,y1)-(x2,y2) [, fill [, border]]
 		// VIEW   resets to fullscreen
 		if (atEndOfStatement()) {
-			return new ViewStmt(line, null, null, null, null, null, null, true);
+			return new ViewStmt(line, null, null, null, null, null, null,false, true);
 		}
 
-		if (peek().isKeyword("SCREEN")) advance();
+		boolean screen = false;
+		if (peek().isKeyword("SCREEN")) { advance(); screen = true; }
 
 		expectPunct("(");
 		Expression x1 = parseExpr();
@@ -694,7 +695,7 @@ public class Parser {
 			}
 		}
 		//skipLine();
-		return new ViewStmt(line, x1, y1, x2, y2, fill, border, false);
+		return new ViewStmt(line, x1, y1, x2, y2, fill, border, screen, false);
 	}
 	private Statement parseDefFn(int line) {
 		// DEF FNname(a, b, ...) = expression
