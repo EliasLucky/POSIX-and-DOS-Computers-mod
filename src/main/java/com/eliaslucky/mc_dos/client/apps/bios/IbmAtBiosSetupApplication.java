@@ -56,6 +56,11 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 
 		g.fill(0, 0, appWidth, appHeight, bg);
 
+		String shadeRow = "\u2592".repeat(Math.max(0,W-2));
+		for (int r = 1; r < H-1; r++) {
+			drawDos(g,shadeRow,CELL_W,r*CELL_H,fg);
+		}
+
 		// Outer frame
 		StringBuilder top = new StringBuilder(W);
 		top.append('\u250C');
@@ -81,17 +86,22 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 		String rightText = "[80286]";
 
 		int innerW = W-2;
+		int leftStart = 2;
 		int centerStart = 1+(innerW - centerText.length())/2;
 		int rightStart = W-2-rightText.length();
-		drawDos(g, leftText, CELL_W, CELL_H, fg);
+		g.fill(leftStart * CELL_W, CELL_H, (leftStart + leftText.length()) * CELL_W,2*CELL_H,bg);
+		g.fill(centerStart * CELL_W, CELL_H, (centerStart + centerText.length()) * CELL_W,2*CELL_H,bg);
+		g.fill(rightStart * CELL_W,CELL_H, (rightStart + rightText.length()) * CELL_W, 2*CELL_H,bg);
+
+		drawDos(g, leftText, leftStart * CELL_W, CELL_H, fg);
 		drawDos(g, centerText, centerStart * CELL_W, CELL_H, fg);
 		drawDos(g, rightText, rightStart * CELL_W, CELL_H ,fg);
 
 		// Body shade fill
-		String shade = "\u2592".repeat(Math.max(0,W-2));
-		for (int r=2; r<H-1;r++) {
-			drawDos(g,shade,CELL_W,r*CELL_H,fg);
-		}
+		//String shade = "\u2592".repeat(Math.max(0,W-2));
+		//for (int r=2; r<H-1;r++) {
+		//	drawDos(g,shade,CELL_W,r*CELL_H,fg);
+		//}
 		
 		// Double-bordered central box
 		renderBox(g, W);
@@ -109,8 +119,8 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 		int boxCol = (W-boxW)/2;
 		int boxRow = 3;
 
-		g.fill((boxCol+1)*CELL_W, (boxRow+1) * CELL_H,
-		       (boxCol+boxW-1)*CELL_W, (boxRow + boxH - 1) * CELL_H,
+		g.fill(boxCol*CELL_W, boxRow * CELL_H,
+		       (boxCol+boxW)*CELL_W, (boxRow + boxH) * CELL_H,
 		       bg);
 		int innerW = boxW -2;
 
@@ -168,11 +178,11 @@ public class IbmAtBiosSetupApplication extends TerminalApplication {
 
 			int y = r*CELL_H;
 			boolean hot = (i == sel);
-			if (hot) {
-				g.fill((boxCol+1) * CELL_W,y,
-				       (boxCol+boxW-1) * CELL_W,y+CELL_H,
-				       fg);
-			}
+			
+			g.fill((boxCol+1) * CELL_W,y,
+				(boxCol+boxW-1) * CELL_W,y+CELL_H,
+				hot ? fg : fg);
+			
 			int textFg = hot ? bg : fg;
 			
 			// Left column: "[N] Key"
