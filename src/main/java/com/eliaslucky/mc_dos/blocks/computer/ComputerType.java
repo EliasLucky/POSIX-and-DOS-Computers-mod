@@ -10,7 +10,6 @@ import com.eliaslucky.mc_dos.blocks.computer.bios.AwardBios;
 import com.eliaslucky.mc_dos.blocks.computer.bios.IbmAtBios;
 import com.eliaslucky.mc_dos.blocks.computer.processors.Dos6CommandProcessor;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
-import com.eliaslucky.mc_dos.blocks.computer.processors.LinuxCommandProcessor;
 
 /**
  * The built-in machine types. Both implement {@link MachineType} so
@@ -51,35 +50,6 @@ public enum ComputerType implements MachineType {
 			new DriveBaySpec(DriveType.FDD_1_44M, "B", "/dev/fd1", "/mnt/floppy2")
 		),
 		() -> MachineConfig.ibmAt(System.currentTimeMillis())
-	),
-
-	PENTIUM_4_LINUX(
-		"mc_dos:pentium_4_linux",
-		"Pentium 4 ACPI BIOS Revision 1008",
-		"Intel(R) Pentium(R) 4 CPU 2.40GHz",
-		"Debian GNU/Linux 3.0 (woody)",
-		"PCI / AGP",
-		0xFFFFFF,
-	List.of(
-		"LILO 22.2 boot:",
-		"Loading Linux 2.4.20-8 ............",
-		"Loading initrd ....................",
-		"",
-		"Kernel 2.4.20-8 on an i686",
-		""
-	),
-		List.of(
-			"bin/", "dev/", "etc/", "home/", "root/", "usr/", "var/",
-			"etc/passwd", "etc/fstab", "etc/hostname", "root/.bashrc"
-		),
-		new LinuxCommandProcessor(),
-		"/",
-		new AwardBios(),
-		List.of(
-			new DriveBaySpec(DriveType.FDD_1_44M, "A", "/dev/fd0", "/mnt/floppy"),
-			new DriveBaySpec(DriveType.DVD_RW,	  "D", "/dev/sr0", "/mnt/cdrom")
-		),
-		() -> MachineConfig.pentium4(System.currentTimeMillis())
 	);
 
 	private final String id;

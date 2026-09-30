@@ -161,7 +161,7 @@ public final class MsdDataCollector {
 		out.append("  Program            Address   Size\n");
 		out.append("  -----------------  --------  ----\n");
 		line(out, "COMMAND.COM", "       --        0 K");
-		line(out, "HIMEM.SYS", "         --        0 K");
+		line(out, "HIMEM.SYS", "       --        0 K");
 
 		// DEVICE DRIVERS
 		section(out, "DEVICE DRIVERS");
@@ -172,11 +172,11 @@ public final class MsdDataCollector {
 			if (names.isEmpty()) {
 				out.append("  No device drivers loaded.\n");
 			} else {
-				out.append("  Name		  Description\n");
+				out.append("  Name        Description\n");
 				out.append("  ----------  ------------------------------------\n");
 				for (String name : names) {
 					String desc = kernel.getDevices().lookup(name).description();
-					out.append(String.format("	%-10s  %s\n", name, desc));
+					out.append(String.format("  %-10s  %s\n", name, desc));
 				}
 			}
 		}
