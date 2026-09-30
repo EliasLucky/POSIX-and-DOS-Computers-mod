@@ -1,8 +1,9 @@
 {
+	"parent": "block/block",
 	"format_version": "1.9.0",
 	"textures": {
 		"0": "mc_dos:block/hardware/lpc_mccmd",
-		"1": "minecraft:command_block_back",
+		"1": "minecraft:block/command_block_back",
 		"particle": "mc_dos:block/hardware/lpc_mccmd"
 	},
 	"elements": [

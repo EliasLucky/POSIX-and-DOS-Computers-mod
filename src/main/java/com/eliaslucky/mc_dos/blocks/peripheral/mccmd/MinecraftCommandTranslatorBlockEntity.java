@@ -22,7 +22,7 @@ public class MinecraftCommandTranslatorBlockEntity extends BlockEntity implement
     private final Deque<String> outputLines = new ArrayDeque<>();
 
     public MinecraftCommandTranslatorBlockEntity(BlockPos pos, BlockState state) {
-        super(AllBlockEntities.MCCMD_BLOCK.get(), pos, state);
+        super(AllBlockEntities.HARDWARE_LPC_MCCMD_BLOCK.get(), pos, state);
     }
 
     // Peripheral

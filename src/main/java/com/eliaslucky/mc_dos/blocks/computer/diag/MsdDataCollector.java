@@ -32,7 +32,7 @@ import java.util.Locale;
  * parses this back into per-category lists for rendering.
  *
  * <p>Facts are line-oriented within each section:
- * {@code "  Label:					  value"} with the label padded to
+ * {@code "  Label:	value"} with the label padded to
  * column 24.
  *
  * @since 1.5
@@ -186,12 +186,12 @@ public final class MsdDataCollector {
 		if (devices.isEmpty()) {
 			out.append("  No devices detected.\n");
 		} else {
-			out.append("  Slot	Class		  Vendor	  Product		  Status\n");
-			out.append("  ----	------------  ----------  --------------  ----------------\n");
+			out.append("  Slot  Class         Vendor      Product         Status\n");
+			out.append("  ----  ------------  ----------  --------------  ----------------\n");
 			for (PeripheralAddress a : devices) {
 				String devName = a.deviceClass().toUpperCase(Locale.ROOT);
 				boolean loaded = kernel != null && kernel.getDevices().isDevice(devName);
-				out.append(String.format("	%-4d  %-12s  %-10s	%-14s  %s\n",
+				out.append(String.format("  %-4d  %-12s  %-10s  %-14s  %s\n",
 						a.slot(),
 						a.deviceClass(),
 						a.vendorId(),

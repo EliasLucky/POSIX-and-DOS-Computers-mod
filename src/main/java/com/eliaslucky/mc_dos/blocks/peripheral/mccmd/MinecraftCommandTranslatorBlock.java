@@ -1,22 +1,20 @@
 package com.eliaslucky.mc_dos.blocks.peripheral.mccmd;
 
 import com.eliaslucky.mc_dos.AllCreativeModeTabs;
-import com.eliaslucky.mc_dos.AllBlockEntities;
 import com.eliaslucky.mc_dos.blocks.ICustomCreativeTab;
+import com.eliaslucky.mc_dos.blocks.DirectionalHorizontalBlock;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class MinecraftCommandTranslatorBlock extends Block
-        implements EntityBlock, ICustomCreativeTab {
+public class MinecraftCommandTranslatorBlock extends DirectionalHorizontalBlock implements EntityBlock, ICustomCreativeTab {
 
     public MinecraftCommandTranslatorBlock(Properties properties) {
         super(properties);
@@ -24,7 +22,7 @@ public class MinecraftCommandTranslatorBlock extends Block
 
     @Override
     public ResourceKey<CreativeModeTab> getCreativeTab() {
-        return AllCreativeModeTabs.BASE_CREATIVE_TAB.getKey();
+        return AllCreativeModeTabs.HARDWARE_CREATIVE_TAB.getKey();
     }
 
     @Override
