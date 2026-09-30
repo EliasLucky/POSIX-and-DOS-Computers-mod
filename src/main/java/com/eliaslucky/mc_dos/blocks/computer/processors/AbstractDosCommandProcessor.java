@@ -10,6 +10,7 @@ import com.eliaslucky.mc_dos.blocks.computer.VirtualFileSystem;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileError;
 import com.eliaslucky.mc_dos.blocks.computer.fs.FileOpResult;
 import com.eliaslucky.mc_dos.blocks.computer.shell.dos.DosShellDialect;
+import com.eliaslucky.mc_dos.blocks.computer.kernel.dos.DosKernel;
 
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
