@@ -35,6 +35,11 @@ public abstract class AbstractDosCommandProcessor implements ICommandProcessor {
 	    return new DosShellDialect(kernel);
 	}
 
+	@Override
+	public Kernel createKernel() {
+		return new DosKernel();
+	}
+
 	// Template contents for a brand new file created by an editor.
 	protected String newFileTemplate(String extension) { return ""; }
 

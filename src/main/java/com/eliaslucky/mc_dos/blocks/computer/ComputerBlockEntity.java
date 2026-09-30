@@ -21,6 +21,7 @@ import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
 import com.eliaslucky.mc_dos.blocks.computer.drive.DriveBay;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
 import com.eliaslucky.mc_dos.items.RemovableMediaItem;
+import com.eliaslucky.mc_dos.api.hardware.DriverRegistry;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -110,9 +111,71 @@ public class ComputerBlockEntity extends BlockEntity {
 		if (machineConfig == null) {
 			machineConfig = machineType.defaultConfig().get();
 		}
+		seedRegisteredDriverFiles();
 		fileSystem.setCurrentPath(machineType.defaultPath());
 		bootState = BootState.POST;
 		bootFromBios();
+	}
+	/**
+	 * Ensure every driver registered for the machine's OS family has its
+	 * file rpesent in the VFS.
+	 */
+	private void seedRegisteredDriverFiles() {
+		String family = machineType.commandProcessor().osFamily();
+		for (DriverRegistry.Entry e : DriverRegistry.forFamily(family)) {
+			if (!e.hasFile()) continue; // UNIX 7 got no file
+			ensureVfsFile(e.installPath(), e.templateContent());
+		}
+	}
+	private void ensureVfsFile(String path, String content) {
+		if (path == null || path.isEmpty()) return;
+
+		String normalized = path.replace('\\', '/');
+		String[] segments = normalized.split("/",-1);
+
+		VirtualFileSystem.Node dir;
+		int startIdx;
+
+		if (normalized.startsWith("/")) {
+			// POSIX absolute: "/lib/modules/.../mccmd.ko"
+			dir = fileSystem.resolvePath("/");
+			startIdx = 1;
+		}
+		else if (segments.length > 0 && segments[0].endsWith(":")) {
+			// DOS drive: "C:\DRIVERS\MCCMD.SYS" (mount btw)
+			dir = fileSystem.resolvePath(segments[0] + "\\");
+			startIdx = 1;
+		}
+		else {
+			// relative. should NOT happen for driver install paths at ALL
+			dir = fileSystem.getCurrentDir();
+			startIdx = 0;
+		}
+		if (dir == null | !dir.isDirectory) return;
+
+		for (int i = startIdx; i < segments.length-1; i++) {
+			String raw = segments[i];
+			if (raw.isEmpty()) continue;
+			String seg = fileSystem.canonicalize(raw);
+			if (seg.isEmpty()) continue;
+
+			VirtualFileSystem.Node child = dir.children.get(seg);
+			if (child == null) {
+				child = new VirtualFileSystem.Node(seg,true);
+				dir.addChild(child);
+			}
+			if (!child.isDirectory) return; // can't descend. give up quietly
+			dir = child;
+		}
+
+		String rawName = segments[segments.length-1];
+		String name = fileSystem.canonicalize(rawName);
+		if (name.isEmpty()) return;
+		if (dir.children.containsKey(name)) return;
+
+		VirtualFileSystem.Node file = new VirtualFileSystem.Node(name,false);
+		file.content = content == null ? "" : content;
+		dir.addChild(file);
 	}
 	public void setBootState(BootState state) {
 		this.bootState = state;

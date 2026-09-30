@@ -97,7 +97,6 @@ public class MsdApplication extends TerminalApplication {
 
 		String current = null;
 		for (String line : raw.split("\n", -1)) {
-			System.out.println(line);
 			if (line.startsWith("=== ") && line.endsWith(" ===")) {
 				current = line.substring(4, line.length() - 4);
 				sectionOrder.add(current);
