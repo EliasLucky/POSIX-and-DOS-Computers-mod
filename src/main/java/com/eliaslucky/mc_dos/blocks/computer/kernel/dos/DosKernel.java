@@ -18,10 +18,10 @@ public class DosKernel implements Kernel {
         loadedDrivers.clear();
 
         // Built-in pseudo-devices always present in DOS.
-        deviceTable.register("CON", new NullHandler("Console"));
-        deviceTable.register("NUL", new NullHandler("Null device"));
-        deviceTable.register("PRN", new NullHandler("Printer (unbacked)"));
-        deviceTable.register("AUX", new NullHandler("Auxiliary"));
+        deviceTable.registerSystem("CON", new NullHandler("Console"));
+        deviceTable.registerSystem("NUL", new NullHandler("Null device"));
+        deviceTable.registerSystem("PRN", new NullHandler("Printer (unbacked)"));
+        deviceTable.registerSystem("AUX", new NullHandler("Auxiliary"));
 
         VirtualFileSystem.Node config = vfs.resolvePath("C:\\CONFIG.SYS");
         if (config == null || config.isDirectory) {

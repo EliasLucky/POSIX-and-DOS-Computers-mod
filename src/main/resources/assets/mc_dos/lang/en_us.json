@@ -1,6 +1,8 @@
 {
 	"itemGroup.mc_dos.base": "Computer Blocks",
 	"itemGroup.mc_dos.peripherals": "Peripheral Hardware Blocks",
+	"block.mc_dos.white_ibm_pcat_computer": "IBM PC/AT Computer",
+	"block.mc_dos.hardware_lpc_mccmd": "Hardware LPC Minecraft Command Translator",
 	"block.mc_dos.white_desk_cabinet": "White Desktop Cabinet",
 	"block.mc_dos.black_desk_cabinet": "Black Desktop Cabinet"
 }

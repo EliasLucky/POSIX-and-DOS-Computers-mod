@@ -1,6 +1,9 @@
 {
 	"itemGroup.mc_dos.base": "Компьютеры",
 	"itemGroup.mc_dos.peripherals": "Периферийные устройства",
+	"block.mc_dos.white_ibm_pcat_computer": "IBM PC/AT компьютер",
+	"block.mc_dos.hardware_lpc_mccmd": "Устройство LPC транслятор Minecraft команд",
 	"block.mc_dos.white_desk_cabinet": "Белый рабочий стол",
 	"block.mc_dos.black_desk_cabinet": "Черный рабочий стол"
+
 }
