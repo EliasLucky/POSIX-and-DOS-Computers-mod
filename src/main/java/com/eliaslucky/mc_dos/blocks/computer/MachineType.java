@@ -2,8 +2,13 @@ package com.eliaslucky.mc_dos.blocks.computer;
 
 import com.eliaslucky.mc_dos.api.bios.Bios;
 import com.eliaslucky.mc_dos.api.bios.MachineConfig;
+import com.eliaslucky.mc_dos.api.hardware.PeripheralBus;
 import com.eliaslucky.mc_dos.api.vfs.DriveType;
+import com.eliaslucky.mc_dos.blocks.computer.bus.AdjacentBlocksBus;
 import com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -67,7 +72,7 @@ public interface MachineType {
 	 * @return the bus, never {@code null}
 	 */
 	default PeripheralBus createBus(Level level, BlockPos pos) {
-		return new AdjacentBlockBus(level,pos);
+		return new AdjacentBlocksBus(level,pos);
 	}
 
 	/** @return initial working directory. */
