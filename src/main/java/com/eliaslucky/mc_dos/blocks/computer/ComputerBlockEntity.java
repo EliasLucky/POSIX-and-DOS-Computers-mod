@@ -198,7 +198,7 @@ public class ComputerBlockEntity extends BlockEntity {
 
 		Bios bios = machineType.bios();
 		if (bios != null) {
-			PeripheralBus bus = new AdjacentBlocksBus(level, worldPosition);
+			PeripheralBus bus = machineType.createBus(level, worldPosition);
 			postLines = new ArrayList<>(bios.runPost(this, bus, machineConfig));
 		} else {
 			postLines = new ArrayList<>();
@@ -216,7 +216,7 @@ public class ComputerBlockEntity extends BlockEntity {
 		Kernel newKernel = proc.createKernel();
 		if (newKernel == null) return;
 
-		PeripheralBus bus = new AdjacentBlocksBus(level, worldPosition);
+		PeripheralBus bus = machineType.createBus(level, worldPosition);
 		newKernel.boot(bus, fileSystem);
 		this.kernel = newKernel;
 	}

@@ -55,6 +55,21 @@ public interface MachineType {
 	/** @return the shell and kernel factory for this machine. */
 	ICommandProcessor commandProcessor();
 
+	/**
+	 * The bus this machine scans for hardware.
+	 *
+	 * <p>PC-class machines use {@link AdjacentBlockBus} - devices must
+	 * touch the computer. Mainframe-class machines override this to return
+	 * a channel bus that walks a cable network instead.
+	 *
+	 * @param level the world the machine lives in
+	 * @param pos   the computer's block position
+	 * @return the bus, never {@code null}
+	 */
+	default PeripheralBus createBus(Level level, BlockPos pos) {
+		return new AdjacentBlockBus(level,pos);
+	}
+
 	/** @return initial working directory. */
 	String defaultPath();
 
