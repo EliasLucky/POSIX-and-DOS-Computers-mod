@@ -33,7 +33,7 @@ public class AdjacentBlocksBus implements PeripheralBus {
 			if (!p.isReady()) continue;
 
 			int slot = slotCounters.merge(p.deviceClass(), 1, Integer::sum) - 1;
-			found.add(new PeripheralAddress(
+			found.add(new PeripheralAddress.Adjacent(
 					p.deviceClass(),
 					p.vendorId(),
 					p.productId(),

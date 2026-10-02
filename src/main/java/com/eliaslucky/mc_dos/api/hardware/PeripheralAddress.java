@@ -1,5 +1,7 @@
 package com.eliaslucky.mc_dos.api.hardware;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 
 /**
@@ -32,9 +34,53 @@ import net.minecraft.core.BlockPos;
  * @see PeripheralBus#scan()
  * @see PeripheralBus#get(PeripheralAddress)
  */
-public record PeripheralAddress( String deviceClass, String vendorId, String productId, int slot, BlockPos worldPos) {
-    @Override
-    public String toString() {
-        return deviceClass + ":" + vendorId + ":" + productId + "@" + slot;
-    }
+public sealed interface PeripheralAddress permits PeripheralAddress.Adjacent, PeripheralAddress.Channel {
+	String deviceClass();
+	String vendorId();
+	String productId();
+	int slot();
+	
+	/** @return a block position if this address has one, else {@code null}. */
+	@Nullable BlockPos worldPos();
+	
+	/** @return the network identifier for channel addresses, else {@code null}. */
+	default @Nullable String networkId() { return null; }
+	
+	/**
+	* An address from an adjacency-based bus.
+	*
+	* @param deviceClass the peripheral's {@link Peripheral#deviceClass()}
+	* @param vendorId    the peripheral's {@link Peripheral#vendorId()}
+	* @param productId   the peripheral's {@link Peripheral#productId()}
+	* @param slot        zero-based index within the device class
+	* @param worldPos    the block position the peripheral occupies
+	*/
+	record Adjacent(String deviceClass, String vendorId, String productId, int slot, BlockPos worldPos) implements PeripheralAddress {
+		@Override
+		public String toString() {
+		    return deviceClass + ":" + vendorId + ":" + productId + "@" + slot;
+		}
+	}
+	
+	/**
+	* An address from a channel-cable bus.
+	*
+	* @param deviceClass the peripheral's {@link Peripheral#deviceClass()}
+	* @param vendorId    the peripheral's {@link Peripheral#vendorId()}
+	* @param productId   the peripheral's {@link Peripheral#productId()}
+	* @param slot        zero-based index within the device class, in
+	*                    the scan order of the network
+	* @param networkId   opaque identifier for the network; stable for
+	*                    the life of the current scan, not persisted
+	* @param seedCable   a cable block in the device's network, or {@code null}
+	*/
+	record Channel(String deviceClass, String vendorId, String productId, int slot, String networkId, @Nullable BlockPos seedCable) implements PeripheralAddress {
+		@Override public @Nullable BlockPos worldPos() { return seedCable; }
+		@Override public @Nullable String networkId() { return networkId; }
+		
+		@Override
+		public String toString() {
+		    return deviceClass + ":" + vendorId + ":" + productId + "@" + slot + " on " + networkId;
+		}
+	}
 }
