@@ -1,0 +1,346 @@
+# BIOS Programming
+
+## 1.0 Purpose
+
+This document describes BIOS in the "POSIX and DOS Computers" mod
+modification. It explains the boot lifecycle of a computer block, the
+`Bios` interface, the way in which POST output is generated and
+delivered to the terminal, and how an addon may supply its own BIOS.
+
+## 2.0 Overview
+
+Every computer block has a BIOS. The BIOS is responsible for:
+
+- Running the power-on self test (POST).
+- Generating POST output for display on the terminal.
+- Declaring the key that opens SETUP.
+- Supplying the identifier of the SETUP screen to the client.
+
+A BIOS does not control the filesystem, the kernel, or the shell.
+Those are the responsibility of the `ICommandProcessor` implementation
+chosen by the machine type.
+
+The BIOS is selected by the `MachineType`. Every `MachineType` value
+returns a `Bios` from its `bios()` method.
+
+## 3.0 The Boot Lifecycle
+
+The boot lifecycle of a computer block proceeds through the following
+phases:
+
+Phase 1. OFF
+
+  The machine has never been powered on, or has been explicitly
+  powered down. No kernel is loaded.
+
+Phase 2. POST
+
+  The BIOS is running its power-on self test. The terminal shows POST
+  output and a countdown for entering SETUP. The shell prompt is
+  inactive.
+
+Phase 3. SETUP
+
+  The user has pressed the SETUP key during the POST window. The
+  client displays the SETUP screen. The shell prompt is inactive.
+
+Phase 4. RUNNING
+
+  POST has completed and the kernel is loaded. The shell prompt is
+  active.
+
+Transitions:
+
+- OFF to POST - The player opens the terminal. The server calls
+  `ComputerBlockEntity.powerOn()`, which sets the boot state to POST
+  and calls the BIOS to generate POST output.
+
+- POST to RUNNING - The countdown expires, or the player presses any
+  key other than the SETUP key. The client sends
+  `ServerboundBootActionPacket` with the `SKIP_POST` action. The
+  server transitions the machine to RUNNING and sends the operating
+  system boot lines to the client.
+
+- POST to SETUP - The player presses the SETUP key during the POST
+  window. The client sends `ServerboundBootActionPacket` with the
+  `ENTER_SETUP` action. The server transitions the machine to SETUP
+  and replies with the machine's `MachineConfig` and the BIOS's SETUP
+  screen identifier.
+
+- SETUP to POST - The player saves and exits SETUP. The server calls
+  `powerOn()`, which re-runs POST. This mirrors the behavior of a
+  real machine, where saving BIOS settings triggers a system reset.
+
+## 4.0 The Bios Interface
+
+Interface name: `com.eliaslucky.mc_dos.api.bios.Bios`
+
+Methods:
+
+- `name () returns String` - The firmware name. Displayed at the top
+  of POST output.
+
+- `version () returns String` - The firmware version. Displayed in the
+  POST banner and by the MSD diagnostic tool.
+
+- `manufacturer () returns String` - The firmware manufacturer.
+  Displayed by MSD.
+
+- `releaseDate () returns String` - The firmware release date as a
+  string. Displayed by MSD.
+
+- `copyright () returns String` - The copyright notice.
+
+- `runPost (ComputerBlockEntity machine, PeripheralBus bus,
+  MachineConfig config) returns List<String>` - Generates POST output.
+  Called by the server on every power-on. The returned list of strings
+  is sent to the client as the POST display.
+
+- `setupKeyCode () returns int` - The GLFW key code that opens SETUP.
+  Return `-1` to disable SETUP.
+
+- `setupPrompt () returns String` - The line printed at the end of
+  POST that tells the user how to enter SETUP. For example,
+  `"Press DEL to enter SETUP"`.
+
+- `setupScreenId () returns String` - The identifier of the client-side
+  SETUP screen. This identifier is looked up in `BiosSetupRegistry` on
+  the client. Return an empty string for BIOSes with no SETUP screen.
+
+## 5.0 MachineConfig
+
+Record name: `com.eliaslucky.mc_dos.api.bios.MachineConfig`
+
+The `MachineConfig` is the machine's BIOS-level configuration. It is
+produced by the `MachineType` when the machine is first placed, and
+is edited by the user in the SETUP screen.
+
+Components:
+
+- `systemTime (long)` - Wall-clock time the BIOS thinks it is, in
+  milliseconds since the epoch.
+- `floppyA (FloppyType)` - Drive type on A:.
+- `floppyB (FloppyType)` - Drive type on B:.
+- `hardDisk1 (DiskType)` - Type of the first hard disk (C:).
+- `hardDisk2 (DiskType)` - Type of the second hard disk (D:).
+- `baseMemoryKb (int)` - Conventional memory in kilobytes.
+- `extendedMemoryKb (int)` - Extended memory in kilobytes.
+- `mathCoprocessor (boolean)` - Presence of a floating-point
+  coprocessor.
+- `primaryDisplay (DisplayType)` - Video adapter type.
+
+The record provides factory methods for two standard configurations:
+
+- `MachineConfig.ibmAt (long systemTime)` - Configuration suitable for
+  an IBM Personal Computer AT.
+- `MachineConfig.pentium4 (long systemTime)` - Configuration suitable
+  for a Pentium 4 workstation.
+
+The record also provides `withX` methods that return a new instance
+with one component changed.
+
+## 6.0 POST Output
+
+POST output is generated by the BIOS in `runPost`. The method receives
+three arguments:
+
+- `machine (ComputerBlockEntity)` - The block entity being powered on.
+- `bus (PeripheralBus)` - The peripheral bus of the machine.
+- `config (MachineConfig)` - The machine's BIOS configuration.
+
+The BIOS returns an ordered list of strings. The list is stored on the
+block entity and is sent to the client through the terminal state
+packet. The client displays each line in order, wrapping long lines
+at the terminal width.
+
+The BIOS should produce output resembling that of a real firmware.
+A typical sequence for an IBM Personal Computer AT might be:
+
+    IBM Personal Computer AT
+    IBM BIOS Version C1.00
+    Copyright IBM Corp. 1981, 1984, 1986
+
+    0640 KB OK
+
+    Press DEL to enter SETUP
+
+The final line is generated by calling `setupPrompt()`. The BIOS may
+choose to include hardware detection lines above the prompt. For
+example:
+
+    Detected hardware:
+      0:00  MCCMD         mc_dos
+
+## 7.0 The SETUP Screen
+
+The SETUP screen is a client-side `TerminalApplication`. It is not
+created by the BIOS. The BIOS only supplies an identifier, and the
+client looks it up in `BiosSetupRegistry`.
+
+The registration is performed during client setup:
+
+    BiosSetupRegistry.register("IBM_AT_SETUP",
+            (screen, config, name) ->
+                    new IbmAtBiosSetupApplication(screen, config, name));
+
+The `SetupFactory` interface accepts three arguments:
+
+- `screen (ComputerTerminalScreen)` - The hosting terminal screen.
+- `config (MachineConfig)` - The machine's current configuration. The
+  screen may edit this configuration and send a save action.
+- `biosName (String)` - The BIOS display name, used for the title bar.
+
+To save changes, the SETUP screen sends a `ServerboundBootActionPacket`
+with the `SAVE_BIOS` action and the new configuration. The server
+stores the configuration and calls `powerOn()`, which re-runs POST.
+
+## 8.0 Registering a Custom BIOS
+
+Step 1. Implement the `Bios` interface.
+
+Step 2. Reference the BIOS from a `MachineType`. The machine type's
+`bios()` method must return an instance.
+
+Step 3. If the BIOS requires a SETUP screen, implement a
+`TerminalApplication` subclass and register it in `BiosSetupRegistry`
+under the identifier returned by `setupScreenId()`.
+
+An addon that supplies its own `MachineType` may supply its own BIOS
+without further work.
+
+## 9.0 Writing a Custom BIOS
+
+The following example shows a minimal BIOS implementation.
+
+    public class ExampleBios implements Bios {
+
+        @Override public String name()         { return "Example BIOS"; }
+        @Override public String version()      { return "v1.00"; }
+        @Override public String manufacturer() { return "Example Corp."; }
+        @Override public String releaseDate()  { return "01/01/2000"; }
+        @Override public String copyright()    { return "(C) 2000 Example"; }
+
+        @Override
+        public List<String> runPost(ComputerBlockEntity machine,
+                                    PeripheralBus bus,
+                                    MachineConfig config) {
+            List<String> out = new ArrayList<>();
+            out.add(name());
+            out.add(version());
+            out.add("");
+            out.add(String.format("%04d KB OK", config.baseMemoryKb()));
+            out.add("");
+            out.add(setupPrompt());
+            return out;
+        }
+
+        @Override public int setupKeyCode()     { return GLFW.GLFW_KEY_F2; }
+        @Override public String setupPrompt()   { return "Press F2 to enter SETUP"; }
+        @Override public String setupScreenId() { return "EXAMPLE_SETUP"; }
+    }
+
+## 10.0 Writing a BIOS SETUP Screen
+
+A SETUP screen is a `TerminalApplication` that receives a
+`MachineConfig` and optionally sends a save action. The typical
+structure uses the TUI framework:
+
+    public class ExampleBiosSetupApplication extends TerminalApplication {
+
+        private MachineConfig config;
+        private final TuiKeyValueTable table;
+        private final TuiScreen widgets = new TuiScreen();
+
+        public ExampleBiosSetupApplication(ComputerTerminalScreen screen,
+                                            MachineConfig config,
+                                            String biosName) {
+            super(screen);
+            this.config = config;
+            this.table = new TuiKeyValueTable(3, 3, 62, 11);
+            rebuildTable();
+            widgets.add(table);
+            widgets.setFocus(table);
+        }
+
+        private void rebuildTable() {
+            table.setRows(List.of(
+                    new TuiKeyValueTable.Row("Time", config.timeString(),
+                            true, "edit.time"),
+                    new TuiKeyValueTable.Row("Date", config.dateString(),
+                            true, "edit.date")
+            ));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float pt) {
+            g.fill(0, 0, appWidth, appHeight, theme().screenBg());
+            TuiBox frame = new TuiBox(2, 2, 64, 15, TuiBox.Style.SINGLE)
+                    .titled("Configuration")
+                    .themed(theme());
+            frame.render(g, this);
+            table.render(g, this);
+            widgets.render(g, this);
+        }
+
+        @Override
+        public boolean keyPressed(int key, int scan, int mods) {
+            if (widgets.getFocus() != null)
+                return widgets.keyPressed(key, scan, mods);
+            if (key == GLFW.GLFW_KEY_ESCAPE) { saveAndExit(); return true; }
+            return table.keyPressed(key, scan, mods);
+        }
+
+        private void saveAndExit() {
+            ModMessages.sendToServer(new ServerboundBootActionPacket(
+                    screen.getPos(),
+                    ServerboundBootActionPacket.Action.SAVE_BIOS,
+                    config));
+            screen.returnToShell();
+        }
+
+        @Override public String getTitle() { return "SETUP"; }
+    }
+
+## 11.0 Built-In BIOS Implementations
+
+### 11.1 IbmAtBios
+
+Class name: `com.eliaslucky.mc_dos.blocks.computer.bios.IbmAtBios`
+
+Models the firmware of an IBM Personal Computer AT. Features a
+three-line IBM banner, a memory test line, hardware enumeration, and
+the `Press DEL to enter SETUP` prompt. The SETUP screen identifier
+is `IBM_AT_SETUP`.
+
+### 11.2 AwardBios
+
+Class name: `com.eliaslucky.mc_dos.blocks.computer.bios.AwardBios`
+
+Models the Phoenix-Award BIOS v6.00PG that shipped on Pentium-class
+motherboards from 2000 to 2005. Features a CPU line, a memory test,
+IDE device enumeration, and the prompt
+`Press DEL to enter SETUP, F12 for Boot Menu`. The SETUP screen
+identifier is `AWARD_SETUP`.
+
+## 12.0 Reference
+
+### 12.1 Interfaces and Records
+
+- `Bios` - Firmware contract.
+- `MachineConfig` - BIOS-level machine configuration.
+- `BiosSetupRegistry` - Client-side registry of SETUP screens.
+
+### 12.2 Related Packets
+
+- `ServerboundBootActionPacket` - Client-to-server actions:
+  `REQUEST_STATE`, `SKIP_POST`, `ENTER_SETUP`, `SAVE_BIOS`.
+- `ClientboundTerminalStatePacket` - Server-to-client phase update:
+  `POST`, `RUNNING`, `SETUP`.
+
+### 12.3 Phase Summary
+
+| Phase    | Terminal shows              | Shell active |
+|----------|-----------------------------|--------------|
+| POST     | POST lines and countdown    | No           |
+| SETUP    | BIOS SETUP screen           | No           |
+| RUNNING  | Shell prompt and history    | Yes          |
