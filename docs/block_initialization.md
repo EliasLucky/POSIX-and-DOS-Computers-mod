@@ -1,68 +1,288 @@
-# Computer Block Initialization
+# Block Initialization
 
-Everytime player clicks Right Mouse Button on `ComputerBlock` the Minecraft function `use(...)` is called.
+## 1.0 Purpose
 
-When the player uses the block, on both sides, `.use()` fires.
-On the **CLIENT-SIDE** open the terminal screen GUI for the player. On the **SERVER-SIDE** boot up the machine. The two processess happen concurrently.
+This document describes how a computer block is initialized in the
+"POSIX and DOS Computers" mod. It covers the registration sequence,
+the block-to-block-entity binding, the machine type binding, the
+default-file setup, the boot sequence, and persistence.
 
-The pipeline below explains the **SERVER-SIDE** booting sequence.
+The intended audience is addon developers who wish to add new
+computer blocks, peripheral blocks, or custom machine types.
 
-## Pipeline
+## 2.0 Overview
 
-On the **SERVER-SIDE**, `use()` calls `ComputerBlockEntity.setComputerType(type)`. This method processes the following:
+A computer block passes through two distinct phases between
+placement and full operation:
 
-1. Tell the filesystem which naming **policy** to use.
+1. **Setup.** The block entity is created, bound to a machine type,
+   and prepared: file system policy, default files, environment,
+   drive bays, and machine configuration are installed.
+2. **Boot.** The machine runs POST, hands off to the kernel, and
+   loads drivers for attached peripherals.
 
-   A **MS-DOS** machine canonicalizes every filename to uppercase 8.3 form (ABCDEFGH.TXT), and looks names up **case-insensitively**.
+A third phase, **initialization**, is the point at which the block
+entity learns what kind of machine it is. This happens once, at
+entity creation, and is the subject of Figure 1 in section 5.
 
-   A **Linux** machine is **case-sensetive** and would treat "Readme.txt" and "readme.txt" as two separate files.
+## 3.0 Block and Block Entity Registration
 
-   The naming policy comes from the command processor.
+### 3.1 Registration Registers
 
-3. If it's **first-time boot** for the machine then setup the root filesystem. More specifically, go through `ComputerType.defaultFiles`. A list which has elements like **"COMMAND.COM", "DOS/", "DOS/QBASIC.EXE"**. Create corresponding node for each.
+Blocks and block entities are recorded in two separate deferred
+registers. Both must be attached to the mod event bus from the mod
+constructor.
 
-   Directories get created implicitly if a path has multiple segments.
+    public static final DeferredRegister<Block> BLOCKS =
+            DeferredRegister.create(ForgeRegistries.BLOCKS, MODID);
 
-   For files, it asks the executable registry for a template body if the name matches a registered executable, and otherwise asks the command processor for default content. Therefore **QBASIC.EXE** gets an MZ header (because it has an executable registry), and **CONFIG.SYS** gets **DEVICE=** line, and neither of those decisions lives in the block entity itself.
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
 
-4. Setup **ENVIRONMENT** variables. **PATH** gets the default search path from the command processor (For MS-DOS `C:\DOS;C:\`; For UNIX `/bin:/usr/bin`; etc.). **COMSPEC**, **PROMPT**, and anything else the OS needs are written here too. This map is what **SET** (MS-DOS command), **export** (Linux), and every fenvironment-variable expansion will read.
+Each block is registered alongside its `BlockItem`. Each block
+entity type is registered by pairing a constructor with the block
+that owns it.
 
-5. Boot the kernel.
+Failure to register a block entity, or registering it after the
+block, causes a crash at world load when the game attempts to
+instantiate the entity.
 
-   - The block entity asks the command processor reference fresh new kernel: `processor.createKernel()`. For a **MS-DOS** machine this returns `new DosKernel()`; for a **UNIX v7** machine, `new UnixV7Kernel()`; for **Linux**, `new LinuxKernel()`; and so on. 
+### 3.2 The Block Class
 
-   - Then initialize `PeripheralBus`. The default implementation of using `Peripheral` block in Minecraft world with `ComputerBlock` uses class `AdjacentBlockBus` to detect `Peripheral` blocks around `ComputerBlock`. It scans the six blocks orthogonally adjacent to the computer and returns any that implement `Peripheral`. Block entity calls `new AdjacentBlocksBus(level, worldPosition)` and hands that bus to the kernel.
+`IBMComputerBlock` extends `DirectionalHorizontalBlock` and
+implements `EntityBlock` and `ICustomCreativeTab`. Subclasses pass a
+`MachineType` to the constructor; the base class stores this and
+forwards it to each entity it creates.
 
-   - The `Kernel.boot()` method is OS-specific. Each Opearting System (like in real-life) have its own ways of setting up drivers and interacting with them. Therefore multiple classes exist to handle this (`DosKernel`, `UnixV7Kernel`, `LinuxKernel`, and so on.).
+### 3.3 Entity Creation
 
-       - **MS-DOS:** reads **C:\CONFIG.SYS**. Every **DEVICE=** line names a **.SYS** file and optionally some **/PARAM=value** arguments. For each line, the kernel asks `DriverRegistry.load("dos", "EXAMPLE")`. For a driver instance we setup `DosDriverContext` with the bus, the parsed params, and a fresh device table. Then call `driver.init(ctx)` to initialize the driver. The driver scans the bus for hardware matching its `deviceClass()` and, if it finds some, registers a device handler under a name. If the driver can't find hardware, it returns `FAILED` and the kernel logs "Bad or missing DRVNAME.SYS" and moves on to the next.
+When the world creates a block entity for a placed block, it calls
+`newBlockEntity`:
 
-       - **UNIX v7:** In real-life UNIX v7 (in 1979) drivers were compiled into the kernel binary; this means no runtime loader like MS-DOS does. `UnixV7Kernel` class simulates this by scanning the bus at boot, and for each distinct device class it finds, looking up a driver in the "unix" family of the registry. If `DriverRegistry.load("unix", "EXAMPLE")` returns a driver, the kernel sets up `UnixDriverContext` with the bus, device table. Then call `driver.init(ctx)`. The driver would register as `/dev/example` and return `OK`.
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        ComputerBlockEntity be = new ComputerBlockEntity(pos, state);
+        be.setMachineType(this.machineType);
+        return be;
+    }
 
-       - **Linux:** the kernel scans the bus, and for each peripheral it checks whether the "linux" family has a matching driver. If so, the driver binds to every peripheral of that class, up to some cap, and registers them as `/dev/example0`, `/dev/example1`, and so on. Kernel sets up `LinuxDriverContext` with the bus, device table. Then call `driver.init(ctx)`.
+The call to `setMachineType` is where the entity learns what kind
+of machine it is.
 
-6. Finally, command prompt appears from the command processor's `getPrompt(currentPath)` method.
+## 4.0 Machine Type Binding
 
-   For MS-DOS: `C:\>`; For UNIX: `root`; For Linux: `root@p4-server`.
+`setMachineType` performs the following work, in order:
 
----
+1. Stores the type.
+2. Sets the file system's `FileNamePolicy` from the command
+   processor.
+3. On first call only: installs default files, sets up the
+   environment map, and creates drive bays.
+4. Creates the default machine configuration if none exists.
+5. Marks the entity as changed so the world will save it.
 
-*At the end of the kernel boot sequence, the `ComputerBlockEntity` finally has a complete intitialized kernel with a populated device table and logs.*
+The "first call only" guard is the boolean field
+`initializedDefaults`, which is persisted with the entity. On a
+world reload, the guard prevents a re-run of the install sequence
+and the loss of user data.
 
-**Additionally,** boot logs can be enabled/disabled to show on the terminal screen. Disabled by default.
+## 5.0 Initialization Sequence
 
-**The ComputerBlock initialization graph looks like this:**
+Figure 1 shows the initialization path taken by
+`setMachineType`. The figure is referred to throughout this section.
 
-![ComputerBlock use() initialization graph](./images/block_initialization.png)
+![Block initialization sequence](./images/block_initialization.png)
 
-## NBT tags
+*Figure 1. Computer block initialization. The machine type is bound
+once, at block entity creation. The file name policy and default
+files come from the command processor. The kernel is created and
+the peripheral bus is initialized; then the kernel boots and loads
+its drivers according to the OS family.*
 
-ComputerBlockEntity entity contains NBT tags which are:
-- `ComputerType` (ComputerType) information about command processor, boot
-- `InitializedDefaults` (bool) one-time use variable. We do not setup default files and environment everytime player interacts with the computer block to use it.
-- `FileSystem` (VirtualFileSystem) Virtual file system that this block have saved. For more information on `VirualFileSystem` read [filesystem.md](./filesystem.md)
-- `Environment` (Map<String, String>) Environment variables.
+### 5.1 File Name Policy
 
-## How to create custom computer block
+The first branch from `setMachineType` installs the file system's
+name policy. The policy is supplied by the machine type's command
+processor and determines how file names are canonicalized: DOS uses
+8.3 short names, POSIX uses case-sensitive long names.
 
-[TODO: WRITE THIS]
+### 5.2 Default Files
+
+The second branch calls `setupDefaultFiles`. The machine type
+supplies a list of file paths. Each path is resolved against the
+VFS and created if missing. Two sources provide content:
+
+- `ExecutableRegistry` supplies executable bodies for names such
+  as `COMMAND.COM` or `QBASIC.EXE`.
+- `ICommandProcessor.defaultFileContent` supplies text for
+  configuration files such as `CONFIG.SYS` or `AUTOEXEC.BAT`.
+
+### 5.3 Kernel Creation
+
+The third branch calls the command processor's `createKernel`
+method. The kernel is the lowest layer of the operating system and
+owns the device table, the driver list, and the boot log.
+
+If the machine type has no kernel (for example, a ROM BASIC), the
+method returns `null` and the machine runs a bare shell.
+
+### 5.4 Peripheral Bus
+
+Before the kernel boots, a peripheral bus is constructed. The bus
+is the machine's only view of attached hardware. The base mod
+provides `AdjacentBlocksBus`, which enumerates the six orthogonal
+neighbors of the computer block. Addons may supply a bus with a
+wider reach.
+
+### 5.5 Kernel Boot and Driver Loading
+
+The kernel's `boot` method receives the peripheral bus and the file
+system. The load sequence depends on the OS family, shown in the
+three right-hand branches of Figure 1.
+
+**MS-DOS.** The kernel reads `C:\CONFIG.SYS`. Each `DEVICE=` line
+is processed in order:
+
+1. The path is stripped to its basename.
+2. The `.SYS` suffix is removed; the resulting name is used as the
+   driver key.
+3. Remaining tokens are parsed as load parameters.
+4. A fresh `DosDriverContext` is constructed.
+5. `DriverRegistry.load("dos", name)` is called. The driver's
+   `init` method runs.
+
+On failure the kernel logs a message and continues to the next
+line.
+
+**UNIX v7.** The kernel scans the peripheral bus once. For each
+distinct `deviceClass`, it calls
+`DriverRegistry.load("unix", deviceClass)`. One driver instance is
+bound per class; multiple devices of the same class are not
+supported.
+
+**Linux.** The kernel scans the peripheral bus and, for each
+peripheral, calls
+`DriverRegistry.load("linux", deviceClass)`. A driver may bind
+multiple matching peripherals. The kernel registers each under an
+indexed device name: `/dev/plotter0`, `/dev/plotter1`, and so on.
+
+### 5.6 A Note on the BIOS Layer
+
+Figure 1 shows the initialization path as it stood before the BIOS
+layer was added. In the current code, the sequence is wrapped:
+`powerOn` runs the BIOS POST first, and only then calls
+`bootKernel`. From the point of view of a running machine, the
+figure remains accurate — the kernel still boots, still scans the
+bus, still loads drivers — but the whole sequence is preceded by a
+firmware phase that reports hardware and accepts a SETUP key.
+
+The BIOS layer is described in the companion document
+`bios_setup.md`.
+
+## 6.0 Boot State Machine
+
+The boot state is stored in the `BootState` enumeration:
+
+| State   | Meaning                                                |
+|---------|--------------------------------------------------------|
+| OFF     | Powered down. No shell prompt.                         |
+| POST    | Running BIOS power-on self test.                       |
+| SETUP   | Inside BIOS SETUP. Shell prompt is inactive.           |
+| RUNNING | Operating system loaded. Shell prompt is active.       |
+
+Transitions:
+
+- OFF → POST: `powerOn` was called.
+- POST → RUNNING: the POST countdown finished or was skipped.
+- POST → SETUP: the player pressed the SETUP key.
+- SETUP → POST: the player saved and exited SETUP.
+- RUNNING → OFF: the machine was explicitly powered down.
+
+## 7.0 Persistence
+
+### 7.1 NBT Save
+
+The block entity writes the following to NBT:
+
+- The machine type ID.
+- The `initializedDefaults` guard.
+- The serialized file system.
+- The environment map.
+- The drive bays.
+- The boot state.
+- The machine configuration.
+
+### 7.2 NBT Load
+
+On load, if the machine type ID is missing or unresolvable, the
+load falls back to the mod's default machine type. If the file
+system is missing but the guard is unset, the load runs default
+setup. This is a defensive path for entities saved by very old
+versions of the mod.
+
+### 7.3 World Reload
+
+The block entity's `load` runs before the world begins ticking.
+The entity is fully populated by the time its tick method first
+runs.
+
+## 8.0 Removal
+
+The block entity overrides `setRemoved` to shut down its kernel.
+Drivers are unloaded, open devices are released, and any references
+to peripherals are cleared. The block entity must not attempt to
+unregister blocks, items, or block entities; registration is global
+and immutable for the lifetime of the game.
+
+## 9.0 Writing a New Computer Block
+
+1. Create a subclass of `IBMComputerBlock` if the block behaves
+   like a computer. Otherwise create a plain `Block` that
+   implements `EntityBlock`.
+2. Create the block entity class. If the machine shares the base
+   `ComputerBlockEntity` fields, extend it. Otherwise extend
+   `BlockEntity` directly.
+3. Register the block and its block item.
+4. Register the block entity type against the block.
+5. If a custom machine type is used, register it with
+   `MachineTypeRegistry` during `FMLCommonSetupEvent`.
+6. Add the block to the appropriate creative tab via
+   `ICustomCreativeTab` or the tab registration event.
+
+## 10.0 Reference
+
+### 10.1 Classes and Interfaces
+
+- `IBMComputerBlock` — base computer block.
+- `ComputerBlockEntity` — block entity that owns machine state.
+- `MachineType` — interface describing a machine.
+- `MachineTypeRegistry` — global registry of machine types.
+- `ICommandProcessor` — shell and command language of an OS.
+- `Kernel` — lowest layer of an operating system.
+- `PeripheralBus` — enumeration of attached hardware.
+- `DriverRegistry` — registry of driver factories.
+- `BootState` — enumeration of boot states.
+- `MachineConfig` — BIOS-level configuration record.
+
+### 10.2 Registration Order
+
+The correct order of registration during mod setup is:
+
+1. Items.
+2. Blocks.
+3. Block entities.
+4. Network packets.
+5. Machine types.
+6. Drivers and executables.
+
+### 10.3 Common Errors
+
+| Symptom                            | Likely cause                                          |
+|------------------------------------|-------------------------------------------------------|
+| Missing block in world             | Block not registered, or registry not attached.       |
+| Missing block entity               | Block entity type not registered, or not paired.      |
+| Null machine type at boot          | `setMachineType` not called, or type ID unresolvable. |
+| Default files reappear after reset | `initializedDefaults` guard not persisted.            |
+| Kernel is null at first tick       | `powerOn` not called, or `bootFromBios` returned early.|
+| Driver does not load on DOS        | `CONFIG.SYS` missing or `DEVICE=` line malformed.     |
+| Driver loads on UNIX but not Linux | Registry key uses OS family mismatch.                 |
