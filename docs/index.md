@@ -41,7 +41,7 @@ the simulated machines.
 
 ### 3. Machine Types
 
-**File:** `machine_types.md` (UNFINISHED DOCUMENT)
+**File:** `machine_types.md`
 
 Describes the `MachineType` interface, the built-in catalogue, and
 the procedure for registering a custom machine. Covers the BIOS,
