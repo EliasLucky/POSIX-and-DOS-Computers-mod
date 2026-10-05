@@ -90,10 +90,13 @@ Methods:
 
 Dialects in the mod:
 
-| Dialect            | OS family | Notes                                    |
-|--------------------|-----------|------------------------------------------|
-| `DosShellDialect`  | dos       | `>`, `>>`, `<`, `|`, and `;` (batch).    |
-| `BourneV7Dialect`  | unix      | The V7 Bourne shell grammar.             |
+| Dialect             | OS family | Notes                                    |
+|---------------------|-----------|------------------------------------------|
+| `DosShellDialect`   | dos       | `>`, `>>`, `<`, `|`, and `;` (batch).    |
+| `ThompsonV5Dialect` | unix      | The UNIX V5 (1974) Thompson shell grammar. Pipes, `.`, `<`, `&`, `;`, and `(...)`. No variables. No control flow. No command substitution. |
+| `ThompsonV6Dialect` | unix      | The UNIX V6 (1975) Thompson shell grammar. Adds `>>`, and `$1`..`$9` positional parameters. No variables. No control flow. No command substitution. |
+| `BourneV7Dialect`   | unix      | The UNIX V7 (1979) Bourne shell grammar. Adds shell variables, `export`, control flow (`if`/`then`/`fi`, `while`, `for`, `case`), functions, backtick command substitution. No `&&`(AND) and (OR) (those came with ksh). No `$()`, no `$(( ))` |
+| `PosixShDialect`    | linux     | POSIX sh (IEEE 1003.1, 1988+). Everything Bourne has, plus `${VAR:-default}`, `${VAR:=...}`, `${#VAR}`, `$((arithmetic))`, `$(command)` (modern command substitution) |
 
 ## 5.0 Pipeline Parsing
 
@@ -225,15 +228,29 @@ the file system is unavailable or empty.
 
 The DOS command processor supplies the following built-ins:
 
-| Command   | Effect                                          |
-|-----------|-------------------------------------------------|
-| `CD`      | Change working directory.                       |
-| `DIR`     | List directory contents.                        |
-| `CLS`     | Clear the terminal screen.                      |
-| `TYPE`    | Print a file's contents.                        |
-| `COPY`    | Copy a file.                                    |
-| `DEL`     | Delete a file.                                  |
-| `VER`     | Print the OS version string.                    |
+| Command        | Effect                                          |
+|----------------|-------------------------------------------------|
+| `CD`/`CHDIR`   | Change working directory.                       |
+| `DIR`          | List directory contents.                        |
+| `MKDIR`/`MD`   | Create a directory.                             |
+| `RMDIR`/`RD`   | Remove a directory.                             |
+| `COPY`         | Copy a file.                                    |
+| `REN`/`RENAME` | Rename a file or directory.                     |
+| `DEL`/`ERASE`  | Delete a file.                                  |
+| `TYPE`         | Print a file's contents.                        |
+| `CLS`          | Clear the terminal screen.                      |
+| `VER`          | Print the OS version string.                    |
+| `VOL`          | Print the drive label and serial number. NOTE: Prints only drive label and serial number of the drive C. |
+| `DATE`         | Print current date in format `EEE MM-dd-yyyy`.  |
+| `TIME`         | Print current time in format `HH:mm:ss.SS`.     |
+| `ECHO`         | Echo                                            |
+| `PATH`         | Set `PATH=` environment variable.               |
+| `SET`          | Set specific environment variable (`COMSPEC=`, `PATH=`, `PROMPT=`). |
+| `TREE`         | Display the tree structure of a directory (NOT IMPLEMENTED). |
+| `EXIT`         | Exit from the system.                           |
+| `FIND`         | Find matches. Used in pipeline parsing.         |
+| `SORT`         | Sort. Used in pipeline parsing.                 |
+| `MORE`         | Pagination (NOT IMPLEMENTED). Used in pipeline parsing. |
 
 The UNIX command processor supplies equivalents in the traditional
 V7 style.
