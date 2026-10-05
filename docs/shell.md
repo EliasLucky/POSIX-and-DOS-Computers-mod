@@ -1,97 +1,291 @@
-# Shell Command and Syntax Processor
+# Shell and Command Language
 
-The client sends a `ServerboundCommandPacket` containing the block position and the raw line.
+## 1.0 Purpose
 
-The server receives the packet on the game thread, looks up the block entity, and calls `ComputerBlockEntity.executeLine(rawLine)`.
+This document describes how commands are received, parsed, and
+executed in the "POSIX and DOS Computers" mod. It explains the
+command processor, the shell dialect, the pipeline executor, the
+stream resolver, and the device command routing path.
 
-`executeLine(...)` starts by asking the command processor for its shell dialect. See "Syntax processor" below.
+The intended audience is addon developers implementing a new shell,
+a new pipeline stage, or a new device command.
 
-## Command Process order
+## 2.0 Overview
 
-Depending on the Operating System (command processor) the order in which possible executable command is found may differ.
+Every machine has one *command processor* per OS family. The
+processor owns three responsibilities:
 
-`commandProcessor.process` processes the command in these possibles orders.
+1. Parse a command line into a pipeline of stages.
+2. Execute each stage with the correct stdin and stdout.
+3. Route the final output back to the terminal, a file, or a
+   device.
 
-- For MS-DOS (`AbstractDosCommandProcessor`) it will be:
+The command processor is backed by a *shell dialect*, which supplies
+the grammar, and by a *stream resolver*, which supplies the file
+and device I/O. A pipeline is executed by a `PipelineExecutor`
+instance constructed with both.
 
-**[INSERT .PNG GRAPH IMAGE]**
+Two figures are used in this document. Figure 1 shows how a
+command that names a device reaches the device. Figure 2 shows how
+a pipeline is parsed and executed stage by stage.
 
-- For Linux (`LinuxCommandProcessor`) it will be:
+## 3.0 The ICommandProcessor Interface
 
-**[INSERT .PNG GRAPH IMAGE]**
+Interface name: `com.eliaslucky.mc_dos.blocks.computer.processors.ICommandProcessor`
 
-- For Unix V7 (`UnixV7CommandProcessor`) it will be:
+Methods:
 
-**[INSERT .PNG GRAPH IMAGE CUZ THEY LOOK BEAUTIFULLLLLL]**
+- `process (ComputerBlockEntity, String) returns String` — Execute
+  a single command line and return the terminal output. Called for
+  commands with no piped stdin.
 
+- `getPrompt (String) returns String` — The prompt shown before the
+  cursor. The argument is the current working directory.
 
+- `defaultPath () returns String` — The default search path for
+  executables, as a PATH-style string.
 
-## Syntax processor
+- `fileNamePolicy () returns FileNamePolicy` — Naming rules for
+  files and directories.
 
-Command processor returns an OS-specific `Dialect` class.
-For MS-DOS: `DosShellDialect`; For UNIX v7: `UnixV7Dialect`; For Linux: `BashDialect`.
+- `osFamily () returns String` — Bucket key for executables and
+  drivers. Standard values: `"dos"`, `"unix"`, `"linux"`.
 
-Each dialect knows what operators its shell supports. (For example, DOS has `>`, `>>`, `<`, `|`, and `;;`; UNIX v7 has those plus `&` for background; Linux has `&&`, `||`, `[[ ... ]]` and many more.)
+- `createKernel () returns Kernel` — Factory for the OS kernel.
+  May return `null` for a bare shell.
 
-The dialect parses the line into a `Pipeline`. For our example let's attempt to execute `TYPE log.txt | FIND "error" > out.txt` on MS-DOS 6.0 which has two Stage objects. The first has command **TYPE**, args **LOG.TXT**, and a stdout redirect `|`. The second has command **FIND**, args "error", and a stdout redirect that targets the file **OUT.TXT** in write mode. The pipe between them is recorded in the pipeline's between list.
+- `shellDialect (Kernel) returns ShellDialect` — The shell grammar.
 
-`PipelineExecutor.execute` iterates over the stages.
+- `createStreamResolver () returns StreamResolver` — Factory for
+  the resolver that handles redirection and pipe carry-over.
 
-**For stage one**, it determines stdin: nothing has been piped in yet, and there's no < file redirect, so stdin is empty. It calls `commandProcessor.processWithStdin(computer, "TYPE LOG.TXT", "")`.
+- `processWithStdin (ComputerBlockEntity, String, String)
+  returns String` — Same as `process`, but with stdin supplied by a
+  pipe or a `<` redirect. The default implementation ignores stdin.
 
-Inside the MS-DOS command processor, `processWithStdin` stashes the stdin string in a field and delegates to the normal process method. That method does its dispatch in order:
-1. It tries version-specific handlers - on MS-DOS 6.0, **MOVE** and **DELTREE**; on MS-DOS 3.3, the newer commands return `Bad command or file name`.
-2. It tries the help system - if the args were `/?`, the processor would return the help text for **TYPE** and stop.
-3. It tries the device table - the kernel's `getDevices().isDevice("TYPE")` returns `false` because no driver registered a device named **TYPE**.
-4. It tries the executable registry - walks the `PATH` from the environment, splits on ;, and looks for **TYPE.EXE** or **TYPE.COM** or **TYPE.BAT** in each directory. There is none.
-5. Finally it falls through to the **built-in** switch and matches case `"TYPE": return doType(vfs, arg)`. The `doType` method resolves **LOG.TXT** in the current directory and returns its content as a string.
+- `defaultFileContent (String) returns String` — Content for
+  well-known files seeded at install time.
 
-The executor catches that string, converts it to bytes, and - because the pipe operator sits between stage one and stage two — stores it as `carryover`.
+## 4.0 The Shell Dialect
 
-**For stage two**, the executor determines stdin from the `carryover`. It calls `processWithStdin(computer, "FIND ERROR", <file content>)`. The MS-DOS processor's dispatch again runs in order. **FIND** isn't version-specific, isn't a help request, isn't a device, isn't an executable in **PATH**. It falls to the switch, matches case `"FIND": return doFind(pendingStdin, arg)`, and `doFind` scans each line of stdin for the substring "error". Matching lines come back formatted with a leading `---------- <n>: prefix`.
+Abstract class: `com.eliaslucky.mc_dos.api.shell.ShellDialect`
 
-But this stage has a `Redirect.File("OUT.TXT", WRITE)`. The executor doesn't print the result to the terminal - it outputs the bytes to the `StreamResolver`. Because the redirect is a `File` and not a `Device`, the resolver canonicalizes the name via the filesystem's policy (**OUT.TXT** is already canonical), finds or creates the node in the current directory, writes the text into its content field, and calls `setChanged()` so the block entity schedules a save.
+A dialect supplies the grammar for one shell language. The base
+class provides a template method that parses a command line into a
+`Pipeline`. Subclasses implement `makeRedirect` to decide whether a
+bare name is a device or a file.
 
-The final String returned by the executor is empty - the output went to a file, not to the terminal. The server packages this in a `ClientboundTerminalOutputPacket` along with the current directory path, and sends it back.
+Methods:
 
-The client receives the packet. `ComputerTerminalScreen.appendOutput` checks the string for special prefixes. It isn't `__CLEAR__`, and it doesn't start with `APP_LAUNCH:`, so it just appends the (empty) lines to the scrollback. The prompt redraws with the current directory.
+- `name () returns String` — Human-readable name.
 
+- `parse (String) returns Pipeline` — Parse a command line into a
+  pipeline. The default implementation splits on the pipe character
+  and builds one stage per segment.
 
+- `makeRedirect (String target, Redirect.Mode mode)
+  returns Redirect` — Classify a redirect target. Return
+  `Redirect.Device` if the kernel recognises the name as a device;
+  otherwise return `Redirect.File`.
 
-**The process graph:**
+Dialects in the mod:
+
+| Dialect            | OS family | Notes                                    |
+|--------------------|-----------|------------------------------------------|
+| `DosShellDialect`  | dos       | `>`, `>>`, `<`, `|`, and `;` (batch).    |
+| `BourneV7Dialect`  | unix      | The V7 Bourne shell grammar.             |
+
+## 5.0 Pipeline Parsing
+
+Figure 2 shows a command with two stages, a pipe, and a redirect.
+The dialect parses the line into a pipeline, the executor runs each
+stage in order, and the final stage's stdout is written to the
+redirect target.
 
 ![Shell syntax parsing](./images/shell_syntax_parsing.png)
 
-## Driver Command Processor
+*Figure 2. Pipeline parsing and execution. The command
+`TYPE log.txt | FIND "error" > out.txt` is parsed into two stages.
+Stage 0 runs `TYPE` with no stdin. Its output becomes Stage 1's
+stdin. Stage 1 runs `FIND "error"`. Its output is written to the
+file `out.txt` by the resolver.*
 
-For our example let's attempt to execute `MCCMD give @p diamod` on MS-DOS 6.0
+### 5.1 Stages
 
-Normal process method is called. That method does its dispatch in order:
-1. It tries version-specific handlers - on MS-DOS 6.0, **MOVE** and **DELTREE**; on MS-DOS 3.3, the newer commands return `Bad command or file name`.
-2. It tries the help system - if the args were `/?`, the processor would return the help text for **TYPE** and stop.
+A pipeline is an ordered list of stages. Each stage has:
 
-3. It tries the device table - the processor asks the kernel:
-   `kernel.getDevices().isDevice("MCCMD")`. The MS-DOS kernel's device
-   table contains every name that a driver registered at boot:
-   `CON`, `NUL`, `PRN`, `AUX`, and - because `MCCMD.SYS` loaded
-   successfully - `MCCMD`.
+- The command text, as typed.
+- The command word (the first token).
+- Any arguments.
+- The stdin source (`None`, `Pipe`, or `Redirect.File`).
+- The stdout sink (`None`, `Pipe`, or `Redirect.File` or
+  `Redirect.Device`).
 
-   Processor decides this is a device command. The check happens
+The parser determines stdin and stdout by position: the stage
+before a pipe provides stdin for the stage after it; a redirect
+attaches to the stage it appears in.
 
-   The lookup returns a `DeviceHandler`. This handler was installed by
-   `DosMccmdDriver.init()` when it called
-   `ctx.registerDevice("MCCMD", DeviceHandler.of(peripheral))`.
+### 5.2 The Executor
 
-4. The processor writes the argument bytes plus a trailing newline: `handler.onWrite((argRaw + "\n").getBytes(StandardCharsets.UTF_8));`
+The pipeline executor walks the stages in order. For each stage it
+calls `processWithStdin` on the command processor, passing the
+previous stage's stdout as the stdin argument. If the stage is the
+first, stdin is the empty string. If the stage is the last, the
+output goes to the terminal or to the final redirect target.
 
-   For the default handler built by `DeviceHandler.of`, `onWrite` delegates straight to `Peripheral.write(bytes)`. In our example the peripheral will be `MinecraftCommandTranslatorBlockEntity` and its write method queues the bytes into a pendingInput buffer.
+### 5.3 Redirect Targets
 
-   The command has been delivered to the hardware.
+A redirect target is either a file or a device. The dialect
+classifies it via `makeRedirect`, which consults the kernel's
+`DeviceLookup`. The DOS dialect, for example, treats `PRN`, `NUL`,
+and any driver-registered name as a device; everything else is a
+file.
 
-5. The peripheral block entity executes on the next tick. Every tick, the `MCCMD` peripheral block entity drains its input buffer. `MinecraftCommandTranslatorBlockEntity.processPendingCommands` splits the buffer on newlines, strips any `/`, and runs each line as a Minecraft command via `MinecraftServer.getCommands().performPrefixedCommand(...)`.
+## 6.0 Stream Redirection
 
-   In our example we attempted to execute `give @p diamond` which runs succesfully.
+Interface name: `com.eliaslucky.mc_dos.api.shell.StreamResolver`
 
-**The process graph:**
+The resolver is the interface between the pipeline executor and
+the file system. It has two methods:
 
-![Driver command execution if command found](./images/driver_command_execution.png)
+- `readAll (Redirect source, ComputerBlockEntity computer)
+  returns byte[]` — Read all bytes from a source. If the source is
+  a device, the kernel's device handler is queried. If the source
+  is a file, the VFS is queried.
+
+- `writeAll (Redirect sink, byte[] data, ComputerBlockEntity
+  computer) returns void` — Write all bytes to a sink. If the sink
+  is a device, the handler's `onWrite` is called. If the sink is a
+  file, the VFS is written.
+
+The DOS resolver also handles the append mode for `>>` by reading
+the existing file, concatenating, and writing back.
+
+## 7.0 Device Command Routing
+
+When a command word names a device rather than an executable, the
+command processor dispatches through the kernel's device table
+instead of the executable registry.
+
+Figure 1 shows the routing path.
+
+![Device command routing](./images/driver_command_execution.png)
+
+*Figure 1. Device command routing. The command processor recognises
+the command word as a device name and looks it up in the kernel's
+device lookup table. The handler's `onWrite` method is called,
+which forwards to the peripheral's `write` method. The peripheral
+queues the bytes for processing on the next server tick.*
+
+### 7.1 The Lookup Table
+
+The kernel exposes a `DeviceLookup` interface with three methods:
+
+- `isDevice (String) returns boolean` — Whether a name is a
+  registered device.
+
+- `lookup (String) returns DeviceHandler` — Resolve a name to its
+  handler.
+
+- `names () returns List<String>` — All registered device names.
+
+The command processor calls `isDevice` before consulting the
+executable registry. If the name is a device, the processor
+retrieves the handler and calls `onWrite` with the argument bytes.
+
+### 7.2 The Handler
+
+`DeviceHandler` is the application-facing view of a device. Its
+`onWrite` method receives bytes; its `onRead` returns bytes. The
+default implementation forwards to a `Peripheral`. Drivers that
+need to transform data on the way through implement a custom
+handler.
+
+### 7.3 The Peripheral
+
+`Peripheral` is the hardware-facing interface. Its `write` method
+accepts bytes without blocking. Its `read` method returns up to a
+requested number of bytes. The peripheral queues bytes for
+processing on the next server tick.
+
+### 7.4 Tick-Ordered Execution
+
+A peripheral that receives bytes does not process them
+synchronously. It queues them and processes them on the next
+server tick. This is deliberate: the terminal's response arrives
+one tick later, which matches the turnaround time of a real
+printer or plotter and prevents the game thread from blocking
+during a long device operation.
+
+## 8.0 Built-in Commands
+
+Built-in commands are implemented directly in the command
+processor rather than as executables. They are available even when
+the file system is unavailable or empty.
+
+The DOS command processor supplies the following built-ins:
+
+| Command   | Effect                                          |
+|-----------|-------------------------------------------------|
+| `CD`      | Change working directory.                       |
+| `DIR`     | List directory contents.                        |
+| `CLS`     | Clear the terminal screen.                      |
+| `TYPE`    | Print a file's contents.                        |
+| `COPY`    | Copy a file.                                    |
+| `DEL`     | Delete a file.                                  |
+| `VER`     | Print the OS version string.                    |
+
+The UNIX command processor supplies equivalents in the traditional
+V7 style.
+
+## 9.0 Writing a New Command
+
+To add a new built-in command to an existing OS:
+
+1. Add the command name to the processor's dispatch table.
+2. Implement the command as a method that takes the machine and the
+   argument string and returns the terminal output.
+3. If the command reads stdin, override `processWithStdin` in the
+   processor or ensure the built-in checks for a non-empty stdin.
+
+To add a new executable to an existing OS:
+
+1. Register the executable with `ExecutableRegistry`.
+2. Provide a `Runner` that receives the machine, the argument
+   string, and the file node.
+3. Return the terminal output as a string. To launch a client-side
+   TUI application, prefix the return value with `APP_LAUNCH:`.
+
+## 10.0 Reference
+
+### 10.1 Classes and Interfaces
+
+- `ICommandProcessor` — OS-specific command language.
+- `ShellDialect` — Grammar for one shell language.
+- `Pipeline` — Ordered list of stages.
+- `PipelineExecutor` — Runs a pipeline stage by stage.
+- `StreamResolver` — Reads and writes redirect targets.
+- `Redirect` — Source or sink for a stage.
+- `DeviceLookup` — Kernel device namespace.
+- `DeviceHandler` — Application-facing device interface.
+- `Peripheral` — Hardware-facing byte stream.
+
+### 10.2 Redirect Forms
+
+| Syntax      | Meaning                                              |
+|-------------|------------------------------------------------------|
+| `> file`    | Write stdout to file, truncating.                    |
+| `>> file`   | Append stdout to file.                               |
+| `< file`    | Read stdin from file.                                |
+| `cmd | cmd` | Pipe stdout of one stage to stdin of the next.       |
+| `> dev`     | Write stdout to a device (DOS only).                 |
+| `;`         | Sequential execution (DOS batch only).               |
+
+### 10.3 Common Errors
+
+| Symptom                              | Likely cause                                     |
+|--------------------------------------|--------------------------------------------------|
+| Command not recognised               | Name not registered as executable or device.     |
+| Redirect target silently ignored     | Dialect returned `Redirect.File` for a device, or the resolver cannot find the file's parent. |
+| Pipeline drops output                | `processWithStdin` not overridden to read stdin. |
+| Device never responds                | Peripheral queues bytes but does not process them on tick. |
