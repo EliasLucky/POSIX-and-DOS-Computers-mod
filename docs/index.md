@@ -74,7 +74,7 @@ shell. Covers the `Runner` functional interface and the
 
 ### 6. Virtual File System
 
-**File:** `virtual_file_system.md` (UNFINISHED DOCUMENT)
+**File:** `virtual_file_system.md`
 
 Describes the `VirtualFileSystem` class, the `Node` record, and
 the mount system. Explains drive letters, POSIX mount points, and
