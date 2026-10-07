@@ -113,6 +113,12 @@ public class ComputerBlockEntity extends BlockEntity {
 		seedRegisteredDriverFiles();
 		fileSystem.setCurrentPath(machineType.defaultPath());
 		bootState = BootState.POST;
+		// Machines with no BIOS have no POST phase.
+		if (machineType.bios() == null) {
+			bootState = BootState.RUNNING;
+			bootKernel();
+			return;
+		}
 		bootFromBios();
 	}
 	/**
